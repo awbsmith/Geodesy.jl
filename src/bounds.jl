@@ -3,7 +3,7 @@
 ### Bounds Type ###
 ###################
 
-type Bounds{T <: Union(LL, LLA, ENU)}
+type Bounds{T <: Union{LL, LLA, ENU}}
     min_y::Float64
     max_y::Float64
     min_x::Float64
@@ -32,7 +32,7 @@ function center(bounds::Bounds{ENU})
     return ENU(x_mid, y_mid)
 end
 
-function center{T <: Union(LL, LLA)}(bounds::Bounds{T})
+function center{T <: Union{LL, LLA}}(bounds::Bounds{T})
     x_mid = (bounds.min_x + bounds.max_x) / 2
     y_mid = (bounds.min_y + bounds.max_y) / 2
 
@@ -51,7 +51,7 @@ function inBounds(loc::ENU, bounds::Bounds{ENU})
     bounds.min_y <= y <= bounds.max_y
 end
 
-function inBounds{T <: Union(LL, LLA)}(loc::T, bounds::Bounds{T})
+function inBounds{T <: Union{LL, LLA}}(loc::T, bounds::Bounds{T})
     x, y = getX(loc), getY(loc)
 
     min_x, max_x = bounds.min_x, bounds.max_x
@@ -61,7 +61,7 @@ function inBounds{T <: Union(LL, LLA)}(loc::T, bounds::Bounds{T})
 end
 
 # only for points that have passed the inBounds test
-function onBounds{T <: Union(LL, LLA, ENU)}(loc::T, bounds::Bounds{T})
+function onBounds{T <: Union{LL, LLA, ENU}}(loc::T, bounds::Bounds{T})
     x, y = getX(loc), getY(loc)
 
     x == bounds.min_x || x == bounds.max_x ||
@@ -70,7 +70,7 @@ end
 
 # only for points where inBounds(p1) != inBounds(p2)
 # TODO: return actual altitude rather than zero
-function boundaryPoint{T <: Union(LL, LLA, ENU)}(p1::T, p2::T, bounds::Bounds{T})
+function boundaryPoint{T <: Union{LL, LLA, ENU}}(p1::T, p2::T, bounds::Bounds{T})
     x1, y1 = getX(p1), getY(p1)
     x2, y2 = getX(p2), getY(p2)
 

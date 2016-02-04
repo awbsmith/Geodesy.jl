@@ -16,11 +16,64 @@ function dms2decimal(d::Float64, m::Float64, s::Float64)
                  d + m/60 + s/3600
 end
 
+####################################
+### Proj4 backed conversions
+### Define first so we can overload
+####################################
+
+# back lat lon alt representations on predefined ellipsoids with Proj4 Projections
+macro p4_ellipse_str()
+	exprs = Vector{Any}(0)
+	for ell_type in subtypes(Ellipse)
+		str = @sprintf("+proj=longlat +a=%0.19f +b=%0.19f +no_defs", ellipsoid(ell_type).a, ellipsoid(ell_type).b)
+		proj = Proj4.Projection(str)
+		lhs = :(Proj4.Projection(::Type{LLA{$ell_type}}))  # N.B. argurment is a LLA{ell_type} type not a LLA type directly (because lat long is on the projection string)
+		rhs = :($proj)
+		push!(exprs, Expr(:(=), lhs, rhs))
+	end
+	return esc(Expr(:block, exprs...))
+end
+@p4_ellipse_str()
+
+# now add a generic version of the above
+Proj4.Projection{T}(X::LLA{T}) = Proj4.Projection(@sprintf("+proj=longlat +a=%0.19f +b=%0.19f +no_defs", ellipsoid(T).a, ellipsoid(T).b))
+
+# and a generic for SRID points 
+Proj4.Projection{T}(X::SRID{T}) = Proj4.Projection{T}
+
+
+
+# SRID -> SRID
+function Proj4.transform{T <: SRID_Types, U <: SRID_Types}(::Type{SRID{T}}, X::SRID{U}) 
+	Y = Proj4.transform(Proj4.Projection(U), Proj4.Projection(T), Vector(X))
+	return SRID{T}(Y[1], Y[2], Y[3])
+end
+Base.convert{T <: SRID_Types}(::Type{SRID{T}}, X::SRID) = Proj4.transform(SRID{T}, X)
+
+# LLA -> SRID
+function Proj4.transform{T <: SRID_Types, U <: LLA}(::Type{SRID{T}}, X::U, degs::Bool=true)
+	Y = Proj4.transform(Proj4.Projection(U), Proj4.Projection(T), [X.lon, X.lat, X.alt], !degs)   # proj4 is lon lat ordering
+	return SRID{T}(Y[1], Y[2], Y[3])
+end
+Base.convert{T <: SRID_Types}(::Type{SRID{T}}, X::LLA) = Proj4.transform(SRID{T}, X)
+
+# SRID <- LLA 
+function Proj4.transform{T <: Datum, U}(::Type{LLA{T}}, X::SRID{U}, degs::Bool=true)
+	Y = Proj4.transform(Proj4.Projection(U), Proj4.Projection(LLA{T}), [X.x, X.y, X.z], !degs)   
+	return LLA{T}(Y[2], Y[1], Y[3])  # proj4 is lon lat ordering
+end
+Base.convert{T <: Datum}(::Type{LLA{T}}, X::SRID) = Proj4.transform(LLA{T}, X)
+
+
+
+
+
+
 ##############################
 ### LL to ECEF coordinates ###
 ##############################
 
-function Base.convert{T <: Union(LL, LLA)}(::Type{ECEF}, ll::T)
+function Base.convert{T <: Union{LL, LLA}}(::Type{ECEF}, ll::T)
     ϕdeg, λdeg, h = ll.lat, ll.lon, T <: LLA ? ll.alt : 0
     d = ellipsoid(T)
 
@@ -76,7 +129,7 @@ end
 ### ECEF to ENU coordinates ###
 ###############################
 
-function ENU(ecef::ECEF, ll_ref::Union(LL, LLA))
+function ENU(ecef::ECEF, ll_ref::Union{LL, LLA})
     ϕdeg, λdeg = ll_ref.lat, ll_ref.lon
 
     ecef_ref = ECEF(ll_ref)
@@ -104,7 +157,7 @@ end
 ### ENU to ECEF coordinates ###
 ###############################
 
-function ECEF(enu::ENU, ll_ref::Union(LL, LLA))
+function ECEF(enu::ENU, ll_ref::Union{LL, LLA})
     ϕdeg, λdeg = ll_ref.lat, ll_ref.lon
 
     ecef_ref = ECEF(ll_ref)
@@ -132,7 +185,7 @@ end
 ### LL to ENU coordinates ###
 #############################
 
-function ENU{T <: Union(LL, LLA)}(ll::T, ll_ref::T)
+function ENU{T <: Union{LL, LLA}}(ll::T, ll_ref::T)
     ecef = ECEF(ll)
     return ENU(ecef, ll_ref)
 end
@@ -141,15 +194,17 @@ end
 ### ENU to LL coordinates ###
 #############################
 
-function Base.call{T <: LLA}(::Type{T}, enu::ENU, ll_ref::Union(LL, LLA))
+function Base.call{T <: LLA}(::Type{T}, enu::ENU, ll_ref::Union{LL, LLA})
     ecef = ECEF(enu, ll_ref)
     return T(ecef)
 end
 
-function Base.call{T <: LL}(::Type{T}, enu::ENU, ll_ref::Union(LL, LLA))
+function Base.call{T <: LL}(::Type{T}, enu::ENU, ll_ref::Union{LL, LLA})
     ecef = ECEF(enu, ll_ref)
     return T(ecef)
 end
+
+
 
 ################################
 ### LL to ENU Bounds objects ###
@@ -158,7 +213,7 @@ end
 # there's not an unambiguous conversion, but for now,
 # returning the minimum bounds that contain all points contained
 # by the input bounds
-function ENU{T <: Union(LL, LLA)}(bounds::Bounds{T}, ll_ref::T = center(bounds))
+function ENU{T <: Union{LL, LLA}}(bounds::Bounds{T}, ll_ref::T = center(bounds))
 
     max_x = max_y = -Inf
     min_x = min_y = Inf

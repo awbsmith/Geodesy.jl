@@ -6,6 +6,7 @@ export
     ENU,
     LL,
     LLA,
+	SRID,
 
     # Other types
     Bounds,
@@ -13,7 +14,14 @@ export
     Ellipsoid,
 
     # Constants
-    WGS84,
+    WGS84_ELLIPSE,
+
+	# Srid related
+	SRID_Types,
+	EPSG_Types,
+	ESRI_Types,
+	@srid_str,
+	EPSG_WGS84,    # typealias for the WGS84 (GPS) SRID type
 
     # Methods
     center,

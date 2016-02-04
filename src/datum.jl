@@ -12,14 +12,14 @@ immutable Ellipsoid
     e′²::Float64      # Second eccentricity squared
 end
 
-function Ellipsoid(; a::String="", b::String="", f_inv::String="")
+function Ellipsoid(; a::AbstractString="", b::AbstractString="", f_inv::AbstractString="")
     if isempty(a) || isempty(b) == isempty(f_inv)
         throw(ArgumentError("Specify parameter 'a' and either 'b' or 'f_inv'"))
     end
     if isempty(b)
-        _ellipsoid_af(BigFloat(a), BigFloat(f_inv))
+        _ellipsoid_af(parse(BigFloat, a), parse(BigFloat, f_inv))
     else
-        _ellipsoid_ab(BigFloat(a), BigFloat(b))
+        _ellipsoid_ab(parse(BigFloat, a), parse(BigFloat, b))
     end
 end
 
@@ -36,7 +36,6 @@ function _ellipsoid_af(a::BigFloat, f_inv::BigFloat)
 end
 
 # A few common Ellipsoids
-
 const eWGS84      = Ellipsoid(a = "6378137.0", f_inv = "298.257223563")
 const eGRS80      = Ellipsoid(a = "6378137.0", f_inv = "298.257222100882711243") # f_inv derived
 const eHayford    = Ellipsoid(a = "6378388.0", f_inv = "297.0")
@@ -48,25 +47,33 @@ const eAiry       = Ellipsoid(a = "6377563.396", b = "6356256.909")
 #
 
 abstract Datum
+abstract Ellipse <: Datum # I think there are other datums
 
-# A few common datums
+# A few common elliptic datums
+immutable WGS84_ELLIPSE <: Ellipse end
+ellipsoid(::Type{WGS84_ELLIPSE}) = eWGS84
 
-# Default Datum: World Geodetic Coordinate System of 1984 (WGS 84)
-immutable WGS84 <: Datum end
-ellipsoid(::Type{WGS84}) = eWGS84
+immutable ETRS89_ELLIPSE <: Ellipse end
+ellipsoid(::Type{ETRS89_ELLIPSE}) = eGRS80
+
+immutable NAD83_ELLIPSE <: Ellipse end
+ellipsoid(::Type{NAD83_ELLIPSE}) = eGRS80
+
+immutable ED50_ELLIPSE <: Ellipse end
+ellipsoid(::Type{ED50_ELLIPSE}) = eHayford
+
+immutable OSGB36_ELLIPSE <: Ellipse end
+ellipsoid(::Type{OSGB36_ELLIPSE}) = eAiry
+
+immutable NAD27_ELLIPSE <: Ellipse end
+ellipsoid(::Type{NAD27_ELLIPSE}) = eClarke1866
 
 
-immutable ETRS89 <: Datum end
-ellipsoid(::Type{ETRS89}) = eGRS80
+#
+# Place holder a reference point for Earth center frames
+#
+abstract  ECEF_Ref
+immutable ECEF_Null_Ref <: Datum end
 
-immutable NAD83 <: Datum end
-ellipsoid(::Type{NAD83}) = eGRS80
 
-immutable ED50 <: Datum end
-ellipsoid(::Type{ED50}) = eHayford
 
-immutable OSGB36 <: Datum end
-ellipsoid(::Type{OSGB36}) = eAiry
-
-immutable NAD27 <: Datum end
-ellipsoid(::Type{NAD27}) = eClarke1866
