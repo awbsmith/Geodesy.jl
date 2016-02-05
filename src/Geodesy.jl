@@ -7,6 +7,7 @@ export
     LL,
     LLA,
 	SRID,
+	WGS84,  # type alias for LLA{WGS84_ELLIPSE}
 
     # Other types
     Bounds,
@@ -21,7 +22,7 @@ export
 	EPSG_Types,
 	ESRI_Types,
 	@srid_str,
-	EPSG_WGS84,    # typealias for the WGS84 (GPS) SRID type
+	EPSG_WGS84,    # typealias for the/a WGS84 (GPS) SRID code
 
     # Methods
     center,
