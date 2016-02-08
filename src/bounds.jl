@@ -4,10 +4,10 @@
 ###################
 
 type Bounds{T <: Union{LL, LLA, ENU}}
+	min_x::Float64
+    max_x::Float64
     min_y::Float64
     max_y::Float64
-    min_x::Float64
-    max_x::Float64
 end
 
 
@@ -128,8 +128,11 @@ end
 ### Helpers               ###
 #############################
 
-# bound theta in degs, so on output -pi <= theta < pi
+# bound theta in rads, so on output -pi <= theta < pi
 bound_theta(theta::Real) = theta - floor((theta+pi) / (2*pi)) * 2*pi
+
+# bound theta in degs, so on output -pi <= theta < pi
+bound_thetad(theta::Real) = theta - floor((theta+180) / (360)) * 360
 
 # function to start bounding boxes for the vector of LLA points X
 function init_bounds{T <: Union{LLA, LL}}(X::Vector{T}, degs::Bool=true)
@@ -141,19 +144,21 @@ function init_bounds{T <: Union{LLA, LL}}(X::Vector{T}, degs::Bool=true)
 	# check for points
 	if (length(X) > 0)
 
+		gmeth = [getX, getY]
+
 		# unsmart method - build both paths around the circle to the first two points
 		cnt_min = length(X)+1
 		for dim = 1:2
 
 			# start point		
-			ts = bound_theta(sc * X[1][dim])
+			ts = bound_theta(sc * gmeth[dim](X[1]))
 			cnt = min(2,length(X))
 
 			# find a second unique point
-			while (cnt <= length(X)) && (ts == bound_theta(sc * X[cnt][dim]))
+			while (cnt <= length(X)) && (ts == bound_theta(sc * gmeth[dim](X[cnt])))
 				cnt += 1
 			end
-			te = (cnt <= length(X)) ? bound_theta(sc * X[cnt][dim]) : ts + eps(ts)
+			te = (cnt <= length(X)) ? bound_theta(sc * gmeth[dim](X[cnt])) : ts + eps(ts)
 
 			# build the two paths possible paths between points
 			bbox_h1[(dim-1)*2+1] = ts
@@ -170,7 +175,6 @@ function init_bounds{T <: Union{LLA, LL}}(X::Vector{T}, degs::Bool=true)
 
 	end
 
-
 	return (bbox_h1, bbox_h2)
 
 end
@@ -185,12 +189,12 @@ function updatebounds!{T <: Union{LLA, LL}}(bbox_h1::AbstractVector, bbox_h2::Ab
 	for i = first:length(X)
 
 		# first coord
-		btheta = bound_theta(sc * X[i][1])
+		btheta = bound_theta(sc * getX(X[i]))
         updatebounds_worker!(btheta, 1, bbox_h1)
         updatebounds_worker!(btheta, 1, bbox_h2)
 
 		# second coord
-		btheta = bound_theta(sc * X[i][2])
+		btheta = bound_theta(sc * getY(X[i]))
         updatebounds_worker!(btheta, 2, bbox_h1)
         updatebounds_worker!(btheta, 2, bbox_h2)
 

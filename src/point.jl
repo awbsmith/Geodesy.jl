@@ -27,10 +27,11 @@ include("SRIDs.jl")
 ##########################
 
 
-### Latitude-Longitude (LL) coordinates (legacy type from the fork)
+### Point in Latitude-Longitude (LL) coordinates
+# proj4 is lon lat ordering
 immutable LL{T <: Datum} <: WorldSurfacePosition
-	lat::Float64
 	lon::Float64  # proj 4 is lon lat    
+	lat::Float64
 	LL(x::Real, y::Real) = new(x, y)  # need to specify a constructor to stop the default constructor overwriting the FixedVectorNoTuple{2, Float64} constructors
 end
 #call{T}(::Type{LL{T}}, a::Tuple, b...) = call(FixedVectorNoTuple, a, b...)  # restore the FSA style constuctor
@@ -48,7 +49,7 @@ immutable EllipHeight{T <: Datum} <: WorldHeight
 end
 
 # custom geoids requiring a "pgm" file
-immutable GeoidHeight{PGMFILENAME <: ASCIIString} <: WorldHeight
+immutable GeoidHeight{T <: GeoidFiles} <: WorldHeight
 	alt::Float64
 end
 
@@ -57,45 +58,45 @@ end
 ### World locations  ###
 ########################
 
+# proj4 is lon lat ordering
 ### Point in Latitude-Longitude-Altitude (LLA) coordinates
 immutable LLA{T <: Datum} <: WorldPosition
-	lat::Float64
 	lon::Float64    
+	lat::Float64
     alt::Float64
 end
-Base.call{T}(::Type{LLA{T}}, lat::Real, lon::Real) = LLA{T}(lat, lon, 0.0)
+Base.call{T}(::Type{LLA{T}}, lon::Real, lat::Real) = LLA{T}(lon, lat, NaN)
+Base.call{T}(::Type{LLA{T}}; lat::Real=NaN, lon::Real=NaN, h::Real=h::Real) = LLA{T}(lon, lat, h)
 ellipsoid{T}(::Type{LLA{T}}) = ellipsoid(T)  # reference ellipsoid for the position
 
 # typealias common usage cases here
-typealias WGS84 LLA{WGS84_ELLIPSE}
-
+typealias LLA_WGS84 LLA{WGS84_ELLIPSE}
 
 ### Point in Earth-Centered-Earth-Fixed (ECEF) coordinates
 # Global cartesian coordinate system rotating with the Earth
-immutable ECEF{T <: ECEF_Ref} <: WorldPosition # ECEF_Ref just a place holder (does the Earth's center of mass move?)
+immutable ECEF{T <: Datum} <: WorldPosition 
     x::Float64
     y::Float64
     z::Float64
 end
+typealias ECEF_WGS84 ECEF{WGS84_ELLIPSE}
+
 
 ### SRID based points (converions will use Proj4)
-### Only handling 2D SRID systems for now
-immutable SRID{T <: SRID_Types} <: WorldPosition
+### N.B, for lat lon style SRIDs,  x -> lon, y -> lat (or getlat() and getlon())
+immutable SRID{T} <: WorldPosition
    	x::Float64
     y::Float64
 	z::Float64
 end
 call{T}(::Type{SRID{T}}, x::Real, y::Real) = call(SRID{T}, x, y, NaN)  # Using NaN to check in case height is important for a transformation (it will pollute)
 
+# convenience for getting the srid from an SRID point
+srid_string{T}(X::SRID{T}) = string(T)
+srid_params{T}(X::SRID{T}) = srid_params(T)
 
 
-### A surface point height combination (chances are you need to implement transforms yourself)
-immutable GenericWorldPoint{T <: WorldSurfacePosition, H <: WorldHeight} <: WorldPosition
-	surface_point::SRID{T}
-	alt::H
-	GenericWorldPoint(x::SRID, y::WorldHeight) = new(x, y)  # need to specify a constructor to stop the default constructor overwriting the FixedVectorNoTuple{2, Float64} constructors
-end
-#call{T,U}(::Type{GenericWorldPoint{T,U}}, a::Tuple, b...) = call(FixedVectorNoTuple, a, b...)  # restore the FSA style constuctor
+
 
 
 
@@ -155,3 +156,10 @@ getZ(lla::LLA) = lla.alt
 getX(enu::ENU) = enu.east
 getY(enu::ENU) = enu.north
 getZ(enu::ENU) = enu.up
+
+getlat(X::SRID) = X.y
+getlon(X::SRID) = X.x
+
+
+
+

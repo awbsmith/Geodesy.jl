@@ -68,12 +68,22 @@ ellipsoid(::Type{OSGB36_ELLIPSE}) = eAiry
 immutable NAD27_ELLIPSE <: Ellipse end
 ellipsoid(::Type{NAD27_ELLIPSE}) = eClarke1866
 
+# get proj4 projections for each ellipse
+@generated function lla_ellipse_proj{T <: Ellipse}(::Type{T})
+	println("Gen: LLA $(T)")
+	proj_str = @sprintf("+proj=longlat +a=%0.19f +b=%0.19f +no_defs", ellipsoid(T).a, ellipsoid(T).b)
+	proj = Proj4.Projection(proj_str)
+end
+@generated function ecef_ellipse_proj{T <: Ellipse}(::Type{T})
+	println("Gen: ECEF $(T)")
+	proj_str = @sprintf("+proj=geocent +a=%0.19f +b=%0.19f +no_defs", ellipsoid(T).a, ellipsoid(T).b)
+	proj = Proj4.Projection(proj_str)
+end
 
-#
-# Place holder a reference point for Earth center frames
-#
-abstract  ECEF_Ref
-immutable ECEF_Null_Ref <: Datum end
+
+# type for custom geoids
+abstract GeoidFiles <: Datum
+
 
 
 

@@ -1,13 +1,20 @@
 module Geodesy
 
 export
+
+	# Abstract super types for point types
+	WorldPosition, 
+    WorldSurfacePosition, 
+    LocalPosition,
+
     # Points
     ECEF,
     ENU,
     LL,
     LLA,
 	SRID,
-	WGS84,  # type alias for LLA{WGS84_ELLIPSE}
+	LLA_WGS84,   # typealias for LLA{WGS84_ELLIPSE}
+	ECEF_WGS84,  # typealias for ECEF{WGS84_ELLIPSE}
 
     # Other types
     Bounds,
@@ -18,11 +25,9 @@ export
     WGS84_ELLIPSE,
 
 	# Srid related
-	SRID_Types,
-	EPSG_Types,
-	ESRI_Types,
-	@srid_str,
-	EPSG_WGS84,    # typealias for the/a WGS84 (GPS) SRID code
+	SRID_LLA_WGS84,      # typealias for the/a WGS84 (GPS) lat lon alt SRID code
+	SRID_ECEF_WGS84,     # typealias for the/a WGS84 (GPS) ECEF SRID code   
+	srid_params,         # get the authority and code from the type
 
     # Methods
     center,
@@ -30,6 +35,8 @@ export
     getX,
     getY,
     getZ,
+	getlat,
+	getlon,
     inBounds
 
     #= Unexported / Experimental
@@ -48,7 +55,7 @@ export
     onBounds
     =#
 
-for f in ["datum", "point", "bounds", "transform", "vicenty", "distance"]
+for f in ["datum", "point", "bounds", "utm", "transform", "vicenty", "distance"]
     include("$f.jl")
 end
 
