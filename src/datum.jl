@@ -43,41 +43,48 @@ const eClarke1866 = Ellipsoid(a = "6378206.4",   b = "6356583.8")
 const eAiry       = Ellipsoid(a = "6377563.396", b = "6356256.909")
 
 #
-# Datum
+# Datum.  Datums can be pretty much anything, so make them an abstract type and add to them as needed
 #
 
 abstract Datum
-abstract Ellipse <: Datum # I think there are other datums
+
+
+abstract Ellipse <: Datum  # Ellipse's are a common datum
 
 # A few common elliptic datums
-immutable WGS84_ELLIPSE <: Ellipse end
-ellipsoid(::Type{WGS84_ELLIPSE}) = eWGS84
+immutable WGS84 <: Ellipse end
+ellipsoid(::Type{WGS84}) = eWGS84
 
-immutable ETRS89_ELLIPSE <: Ellipse end
-ellipsoid(::Type{ETRS89_ELLIPSE}) = eGRS80
+immutable ETRS89 <: Ellipse end
+ellipsoid(::Type{ETRS89}) = eGRS80
 
-immutable NAD83_ELLIPSE <: Ellipse end
-ellipsoid(::Type{NAD83_ELLIPSE}) = eGRS80
+immutable NAD83 <: Ellipse end
+ellipsoid(::Type{NAD83}) = eGRS80
 
-immutable ED50_ELLIPSE <: Ellipse end
-ellipsoid(::Type{ED50_ELLIPSE}) = eHayford
+immutable ED50 <: Ellipse end
+ellipsoid(::Type{ED50}) = eHayford
 
-immutable OSGB36_ELLIPSE <: Ellipse end
-ellipsoid(::Type{OSGB36_ELLIPSE}) = eAiry
+immutable OSGB36 <: Ellipse end
+ellipsoid(::Type{OSGB36}) = eAiry
 
-immutable NAD27_ELLIPSE <: Ellipse end
-ellipsoid(::Type{NAD27_ELLIPSE}) = eClarke1866
+immutable NAD27 <: Ellipse end
+ellipsoid(::Type{NAD27}) = eClarke1866
+
+# generic version
+ellipsoid{T}(::Type{T}) = error("Type $(T) is not a known ellipsoid")
 
 # get proj4 projections for each ellipse
 @generated function lla_ellipse_proj{T <: Ellipse}(::Type{T})
 	println("Gen: LLA $(T)")
 	proj_str = @sprintf("+proj=longlat +a=%0.19f +b=%0.19f +no_defs", ellipsoid(T).a, ellipsoid(T).b)
 	proj = Proj4.Projection(proj_str)
+	return :($proj)
 end
 @generated function ecef_ellipse_proj{T <: Ellipse}(::Type{T})
 	println("Gen: ECEF $(T)")
 	proj_str = @sprintf("+proj=geocent +a=%0.19f +b=%0.19f +no_defs", ellipsoid(T).a, ellipsoid(T).b)
 	proj = Proj4.Projection(proj_str)
+	return :($proj)
 end
 
 

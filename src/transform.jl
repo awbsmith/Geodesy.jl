@@ -17,8 +17,6 @@ function dms2decimal(d::Float64, m::Float64, s::Float64)
 end
 
 
-
-
 ##################################################################
 ### Function to perform transformations                        ###
 ##################################################################
@@ -36,18 +34,45 @@ function transform_point{T <:Union{WorldPosition, WorldSurfacePosition, LocalPos
 end
 
 
-
 ####################################
 ### Proj4 backed conversions
 ### Define first so we can overload
 ####################################
 
-# build methods to get a proj 4 projection
+# build methods to get a proj 4 projection for LLA, ECEF, SRID
 Proj4.Projection{T <: Ellipse}(X::LLA{T}) = lla_ellipse_proj(T)
+Proj4.Projection{T <: Ellipse}(::Type{LLA{T}}) = lla_ellipse_proj(T)
+
 Proj4.Projection{T <: Ellipse}(X::ECEF{T}) = ecef_ellipse_proj(T)
+Proj4.Projection{T <: Ellipse}(::Type{ECEF{T}}) = ecef_ellipse_proj(T)
+
 Proj4.Projection{T}(X::SRID{T}) = get_projection(Val{T})
+Proj4.Projection{T}(::Type{SRID{T}}) = get_projection(Val{T})
+
+
+
+##############################################
+### LLA / ECEF / SRID "datum" conversions  ###
+### Done by Proj4                          ###
+##############################################
+
+Proj4.transform{T}(::Type{LLA{T}}, X::LLA{T}) = X		   # same datum
+function Proj4.transform{T, U}(::Type{LLA{T}}, X::LLA{U})
+	println("Doing Proj4") 
+	Y = Proj4.transform(Proj4.Projection(X), Proj4.Projection(LLA{U}), [X.lon, X.lat, X.alt])
+	return LLA{T}(Y[1], Y[2], Y[3])
+end
+Base.convert{T}(::Type{LLA{T}}, X::LLA) = Proj4.transform(LLA{T}, X)
+
+Proj4.transform{T <: Datum}(::Type{ECEF{T}}, X::ECEF{T}) = X  # same datum
+function Proj4.transform{T <: Datum, U <: Datum}(::Type{ECEF{T}}, X::ECEF{U})
+	Y = Proj4.transform(Proj4.Projection(X), Proj4.Projection(ECEF{U}), [X.x, X.y, X.z])
+	return ECEF{T}(Y[1], Y[2], Y[3])
+end
+Base.convert{T}(::Type{ECEF{T}}, X::ECEF) = Proj4.transform(ECEF{T}, X)
 
 # SRID -> SRID
+Proj4.transform{T}(::Type{SRID{T}}, X::SRID{T}) = X
 function Proj4.transform{T, U}(::Type{SRID{T}}, X::SRID{U}) 
 	Y = Proj4.transform(get_projection(Val{U}), get_projection(Val{T}), Vector(X))
 	return SRID{T}(Y[1], Y[2], Y[3])
@@ -75,9 +100,9 @@ end
 Base.convert{T <: Datum}(::Type{LLA{T}}, X::SRID) = Proj4.transform(LLA{T}, X)
 
 
-######################################
+#######################################
 ### SRID to / from ECEF coordinates ###
-######################################
+#######################################
 
 
 # ECEF -> SRID
@@ -120,11 +145,12 @@ end
 Base.convert{T <: Datum}(::Type{ECEF}, ll::Union{LL{T}, LLA{T}}) = convert(ECEF{T}, ll)
 Base.call{T <: ECEF}(::Type{T}, ll::Union{LL, LLA}) = convert(ECEF, ll)
 
+
 ##############################
 ### ECEF to LL coordinates ###
 ##############################
 
-function Base.convert{T}(::Type{LLA{T}}, ecef::ECEF{T})
+function Base.convert{T <: Datum}(::Type{LLA{T}}, ecef::ECEF{T})
     x, y, z = ecef.x, ecef.y, ecef.z
     d = ellipsoid(T)
 
@@ -138,11 +164,6 @@ function Base.convert{T}(::Type{LLA{T}}, ecef::ECEF{T})
 
 	lla = LLA{T}(rad2deg(λ), rad2deg(ϕ), h)
 
-	# TESTING - compare accuracy to this method
-	lla2 = test_acc(ecef)
-	ecef_d1 = ECEF(lla)
-	ecef_d2 = ECEF(lla2)
-	println("ECEF - >LLA Round trip closed form error: $(norm(ecef - ecef_d1)), iterative error:$(norm(ecef - ecef_d2))")
 	
     return lla
 end
@@ -150,9 +171,8 @@ Base.convert{T <: Datum}(::Type{LLA}, ecef::ECEF{T}) = convert(LLA{T}, ecef)
 Base.call{T <: LLA}(::Type{T}, ecef::ECEF) = convert(LLA, ecef)
 
 
-
 # TESTING - compare accuracy to this method
-function test_acc(ecef::ECEF{WGS84_ELLIPSE})
+function convert_test(ecef::ECEF{WGS84})
 
 	# termination tolerances for convergence
     hTol = 1e-6
@@ -168,7 +188,7 @@ function test_acc(ecef::ECEF{WGS84_ELLIPSE})
     lat = atan2(Z,(1.0 - eWGS84.e²) * R)
 	
 	converged = false
-    maxIter = 5
+    maxIter = 10
     i=1
     while (!converged) && (i <= maxIter)
         Nlat = eWGS84.a/(sqrt(1.0 - eWGS84.e² * (sin(lat))^2))
@@ -184,10 +204,11 @@ function test_acc(ecef::ECEF{WGS84_ELLIPSE})
 
 end
 
+
 # TODO:
 # more coercion than conversion?
 # what would not having this a conversion mean for viability of LL type?
-function Base.convert{T}(::Type{LL{T}}, ecef::ECEF{T})
+function Base.convert{T <: Datum}(::Type{LL{T}}, ecef::ECEF{T})
     x, y, z = ecef.x, ecef.y, ecef.z
     d = ellipsoid(T)
 
@@ -203,11 +224,13 @@ end
 Base.convert{T <: Datum}(::Type{LL}, ecef::ECEF{T}) = convert(LL{T}, ecef)
 Base.call{T <: LL}(::Type{T}, ecef::ECEF) = convert(LL, ecef)
 
+
+
 ###############################
 ### ECEF to ENU coordinates ###
 ###############################
 
-function ENU{T <: Datum}(ecef::ECEF{T}, ll_ref::Union{LL{T}, LLA{T}})
+function ENU{T <: Datum}(ecef::ECEF{T}, ll_ref::LLA{T})
     ϕdeg, λdeg = ll_ref.lat, ll_ref.lon
 
     ecef_ref = ECEF(ll_ref)
@@ -228,44 +251,17 @@ function ENU{T <: Datum}(ecef::ECEF{T}, ll_ref::Union{LL{T}, LLA{T}})
     north = -cosλ*sinϕ * Δx + -sinλ*sinϕ * Δy + cosϕ * Δz
     up    =  cosλ*cosϕ * Δx +  sinλ*cosϕ * Δy + sinϕ * Δz
 
-    return ENU(east, north, up)
+    return ENU{ll_ref}(east, north, up)
 end
-
-###############################################
-### Transformation matrices for ENU -> ECEF ###
-###############################################
-
-function transform_matrix{T}(dest::Type{ECEF{T}}, src::Type{ENU}, ll_ref::Union{LL{T}, LLA{T}})
-
-	ϕdeg, λdeg = ll_ref.lat, ll_ref.lon
-
-	# Compute rotation matrix
-    sinλ, cosλ = sind(λdeg), cosd(λdeg)
-    sinϕ, cosϕ = sind(ϕdeg), cosd(ϕdeg)
-
-	# Reference
-	ecef_ref = ECEF{T}(ll_ref)
-
-	R = @fsa([-sinλ  -cosλ*sinϕ    cosλ*cosϕ    ecef_ref.x;
-			   cosλ  -sinλ*sinϕ    sinλ*cosϕ    ecef_ref.y;
-			   0.0    cosϕ           sinϕ            ecef_ref.z
-			   0.0    0.0        0.0          1.0])
-
-end
-transform_matrix{T}(dest::Type{ECEF}, src::Type{ENU}, ll_ref::Union{LL{T}, LLA{T}}) = transform_matrix(src, ECEF{T},ll_ref)
-
-
-# the other way
-transform_matrix{T}(dest::Type{ENU}, src::Type{ECEF{T}}, ll_ref::Union{LL{T}, LLA{T}}) = transform_matrix(src, dest, ll_ref)'
-transform_matrix{T}(dest::Type{ENU}, src::Type{ECEF}, ll_ref::Union{LL{T}, LLA{T}}) = transform_matrix(src, dest, ll_ref)'
-
 
 ###############################
 ### ENU to ECEF coordinates ###
 ###############################
 
+# convert to ECEF when no LLA reference point is included in the template for the ENU input
 function ECEF{T <: Datum}(enu::ENU, ll_ref::Union{LL{T}, LLA{T}})
-    ϕdeg, λdeg = ll_ref.lat, ll_ref.lon
+    
+	ϕdeg, λdeg = ll_ref.lat, ll_ref.lon
 
     ecef_ref = ECEF(ll_ref)
 
@@ -288,27 +284,63 @@ function ECEF{T <: Datum}(enu::ENU, ll_ref::Union{LL{T}, LLA{T}})
     return ECEF{T}(X, Y, Z)
 end
 
-#############################
-### LL to ENU coordinates ###
-#############################
+# convert to ECEF when the LLA refernce position is included in the ENU template
+ECEF{T <: LLA}(enu::ENU{T}) = ECEF(enu, T)
 
-function ENU{T <: Union{LLA, LL}}(ll::T, ll_ref::T)
-    ecef = ECEF(ll)
-    return ENU(ecef, ll_ref)
+
+###############################################
+### Transformation matrices for ENU -> ECEF ###
+###############################################
+
+# no LLA reference provided in the ENU type so a LLA ref must be supplied
+# N.B. this will ignore the LLA refernce in ENU template
+function transform_matrix{T <: Datum}(dest::Type{ECEF{T}}, lla_ref::LLA{T})
+	
+	ϕdeg, λdeg = ll_ref.lat, ll_ref.lon
+
+	# Compute rotation matrix
+    sinλ, cosλ = sind(λdeg), cosd(λdeg)
+    sinϕ, cosϕ = sind(ϕdeg), cosd(ϕdeg)
+
+	# Reference
+	ecef_ref = ECEF{T}(ll_ref)
+
+	Tmat= @fsa([-sinλ  -cosλ*sinϕ    cosλ*cosϕ    ecef_ref.x;
+			   cosλ  -sinλ*sinϕ    sinλ*cosϕ    ecef_ref.y;
+			   0.0    cosϕ           sinϕ            ecef_ref.z
+			   0.0    0.0        0.0          1.0])
 end
 
+
 #############################
-### ENU to LL coordinates ###
+### LLA to ENU coordinates ###
 #############################
 
-function Base.call{T <: Datum}(::Type{LLA{T}}, enu::ENU, ll_ref::Union{LL{T}, LLA{T}})
+function ENU{T  <: Datum}(lla::LLA{T}, lla_ref::LLA{T})
+	ecef = ECEF{T}(lla)
+	ENU(ecef, lla_ref)
+end
+
+
+#############################
+### ENU to LLA coordinates ###
+#############################
+
+# LLA reference NOT provided in the ENU type so it needs to be another input
+function Base.call{T <: Datum}(::Type{LLA{T}}, enu::ENU, ll_ref::LLA{T})
     ecef = ECEF(enu, ll_ref)
     return LLA(ecef)
 end
 
-function Base.call{T <: LL}(::Type{LL{T}}, enu::ENU, ll_ref::Union{LL{T}, LLA{T}})
-    ecef = ECEF(enu, ll_ref)
-    return LL(ecef)
+# LLA reference provided in the ENU type 
+function Base.call{T <: Datum}(::Type{LLA{T}}, enu::ENU)
+	lla = LLA(enu)
+	@assert(datum(lla) == T, "Output has a different datum to the input")
+end
+function Base.call(::Type{LLA}, enu::ENU)
+	lla_ref = LLA_ref(enu)
+    ecef = ECEF(enu, lla_ref)
+    return LLA(ecef)
 end
 
 

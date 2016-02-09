@@ -7,7 +7,7 @@ export
     WorldSurfacePosition, 
     LocalPosition,
 
-    # Points
+    # Position types
     ECEF,
     ENU,
     LL,
@@ -16,13 +16,16 @@ export
 	LLA_WGS84,   # typealias for LLA{WGS84_ELLIPSE}
 	ECEF_WGS84,  # typealias for ECEF{WGS84_ELLIPSE}
 
+	# convenience for using local points without a refernce point
+	LLA_Null,  
+
     # Other types
     Bounds,
     Datum,
     Ellipsoid,
 
-    # Constants
-    WGS84_ELLIPSE,
+    # Known ellipsoids
+    WGS84,
 
 	# Srid related
 	SRID_LLA_WGS84,      # typealias for the/a WGS84 (GPS) lat lon alt SRID code
