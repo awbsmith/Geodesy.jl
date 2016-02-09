@@ -58,15 +58,14 @@ Proj4.Projection{T}(::Type{SRID{T}}) = get_projection(Val{T})
 
 Proj4.transform{T}(::Type{LLA{T}}, X::LLA{T}) = X		   # same datum
 function Proj4.transform{T, U}(::Type{LLA{T}}, X::LLA{U})
-	println("Doing Proj4") 
-	Y = Proj4.transform(Proj4.Projection(X), Proj4.Projection(LLA{U}), [X.lon, X.lat, X.alt])
+	Y = Proj4.transform(Proj4.Projection(X), Proj4.Projection(LLA{T}), [X.lon, X.lat, X.alt])
 	return LLA{T}(Y[1], Y[2], Y[3])
 end
 Base.convert{T}(::Type{LLA{T}}, X::LLA) = Proj4.transform(LLA{T}, X)
 
 Proj4.transform{T <: Datum}(::Type{ECEF{T}}, X::ECEF{T}) = X  # same datum
 function Proj4.transform{T <: Datum, U <: Datum}(::Type{ECEF{T}}, X::ECEF{U})
-	Y = Proj4.transform(Proj4.Projection(X), Proj4.Projection(ECEF{U}), [X.x, X.y, X.z])
+	Y = Proj4.transform(Proj4.Projection(X), Proj4.Projection(ECEF{T}), [X.x, X.y, X.z])
 	return ECEF{T}(Y[1], Y[2], Y[3])
 end
 Base.convert{T}(::Type{ECEF{T}}, X::ECEF) = Proj4.transform(ECEF{T}, X)
@@ -122,7 +121,6 @@ Base.convert{T <: Datum}(::Type{ECEF{T}}, X::SRID) = Proj4.transform(LLA{T}, X)
 
 
 
-
 ##############################
 ### LL to ECEF coordinates ###
 ##############################
@@ -142,8 +140,9 @@ function Base.convert{T <: Datum}(::Type{ECEF{T}}, ll::Union{LL{T}, LLA{T}})
 
     return ECEF{T}(x, y, z)
 end
+Base.convert{T <: Datum, U <: Datum}(::Type{ECEF{T}}, ll::Union{LL{U}, LLA{U}}) = convert(ECEF{T}, convert(ECEF{U}, ll))
 Base.convert{T <: Datum}(::Type{ECEF}, ll::Union{LL{T}, LLA{T}}) = convert(ECEF{T}, ll)
-Base.call{T <: ECEF}(::Type{T}, ll::Union{LL, LLA}) = convert(ECEF, ll)
+
 
 
 ##############################
@@ -167,9 +166,8 @@ function Base.convert{T <: Datum}(::Type{LLA{T}}, ecef::ECEF{T})
 	
     return lla
 end
+Base.convert{T <: Datum, U <: Datum}(::Type{LLA{T}}, ecef::ECEF{U}) = convert(LLA{T}, convert(LLA{U}, ecef))
 Base.convert{T <: Datum}(::Type{LLA}, ecef::ECEF{T}) = convert(LLA{T}, ecef)
-Base.call{T <: LLA}(::Type{T}, ecef::ECEF) = convert(LLA, ecef)
-
 
 # TESTING - compare accuracy to this method
 function convert_test(ecef::ECEF{WGS84})

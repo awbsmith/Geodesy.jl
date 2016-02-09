@@ -107,7 +107,7 @@ end
 ### Local Coordinate Frames ###
 ###############################
 
-type LLA_Null <: AbstractLLA end  # when we don't want to embed the reference frame in out Local coordinates
+type NullLLA <: AbstractLLA end  # when we don't want to embed the reference frame in out Local coordinates
 
 ### Point in East-North-Up (ENU) coordinates
 # Local cartesian coordinate system
@@ -118,7 +118,11 @@ immutable ENU{T} <: LocalPosition
     up::Float64
 end
 LLA_ref{T}(::ENU{T}) = T
+<<<<<<< HEAD
 call(::Type{ENU}, e::Real, n::Real, u::Real) = ENU{LLA_Null}(e,n,u)  # allow default constructuction with no reference LLA
+=======
+call(::Type{ENU}, e::Real, n::Real, u::Real) = ENU{NullLLA}(e,n,u)  # allow default constructuction with no reference LLA
+>>>>>>> Added the world reference point to the ENU point type's template
 #ENU(x, y) = ENU(x, y, 0.0)
 
 
