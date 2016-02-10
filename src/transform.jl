@@ -40,11 +40,11 @@ end
 ####################################
 
 # build methods to get a proj 4 projection for LLA, ECEF, SRID
-Proj4.Projection{T <: Ellipse}(X::LLA{T}) = lla_ellipse_proj(T)
-Proj4.Projection{T <: Ellipse}(::Type{LLA{T}}) = lla_ellipse_proj(T)
+Proj4.Projection{T <: EllipseDatum}(X::LLA{T}) = lla_ellipse_proj(T)
+Proj4.Projection{T <: EllipseDatum}(::Type{LLA{T}}) = lla_ellipse_proj(T)
 
-Proj4.Projection{T <: Ellipse}(X::ECEF{T}) = ecef_ellipse_proj(T)
-Proj4.Projection{T <: Ellipse}(::Type{ECEF{T}}) = ecef_ellipse_proj(T)
+Proj4.Projection{T <: EllipseDatum}(X::ECEF{T}) = ecef_ellipse_proj(T)
+Proj4.Projection{T <: EllipseDatum}(::Type{ECEF{T}}) = ecef_ellipse_proj(T)
 
 Proj4.Projection{T}(X::SRID_Pos{T}) = get_projection(Val{T})
 Proj4.Projection{T}(::Type{SRID_Pos{T}}) = get_projection(Val{T})

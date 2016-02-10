@@ -11,8 +11,11 @@ abstract  WorldPosition  <: FixedVectorNoTuple{3, Float64}
 
 # abstract form for static world coordinates, where a fixed point on the Earth's surface has the same coordinate every year (adjusts for continental drift etc).  
 # E.g. ITRS syles
-# Transformations from StaticWorldPosition <-> WorldPosition require a date
+# Transformations from StaticWorldPosition <-> WorldPosition require a date in the datum
 abstract  StaticWorldPosition  <: FixedVectorNoTuple{3, Float64}
+
+# type to include times for high precision surveys (not implemented)
+abstract  TimedWorldPosition  <: FixedVectorNoTuple{4, Float64}  
 
 # abstract form for world surface coordinates
 abstract  WorldSurfacePosition  <: FixedVectorNoTuple{2, Float64}
@@ -158,7 +161,7 @@ ENU(xyz::XYZ) = ENU(xyz.x, xyz.y, xyz.z)
 =#
 
 # retrieve datums and ellipsoids
-ellipsoid{T <: Ellipse}(::Union{LLA{T}, LL{T}, ECEF{T}}) = ellipsoid(T)  # reference ellipsoid for the position
+ellipsoid{T <: EllipseDatum}(::Union{LLA{T}, LL{T}, ECEF{T}}) = ellipsoid(T)           # reference ellipsoid for the position
 datum{T <: Datum}(::Union{LLA{T}, LL{T}, ECEF{T}, StaticLLA{T}}) = T                   # reference datum for the position
 
 ### get*
