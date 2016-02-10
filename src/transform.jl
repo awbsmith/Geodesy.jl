@@ -46,8 +46,8 @@ Proj4.Projection{T <: Ellipse}(::Type{LLA{T}}) = lla_ellipse_proj(T)
 Proj4.Projection{T <: Ellipse}(X::ECEF{T}) = ecef_ellipse_proj(T)
 Proj4.Projection{T <: Ellipse}(::Type{ECEF{T}}) = ecef_ellipse_proj(T)
 
-Proj4.Projection{T}(X::SRID{T}) = get_projection(Val{T})
-Proj4.Projection{T}(::Type{SRID{T}}) = get_projection(Val{T})
+Proj4.Projection{T}(X::SRID_Pos{T}) = get_projection(Val{T})
+Proj4.Projection{T}(::Type{SRID_Pos{T}}) = get_projection(Val{T})
 
 
 
@@ -71,12 +71,12 @@ end
 Base.convert{T}(::Type{ECEF{T}}, X::ECEF) = Proj4.transform(ECEF{T}, X)
 
 # SRID -> SRID
-Proj4.transform{T}(::Type{SRID{T}}, X::SRID{T}) = X
-function Proj4.transform{T, U}(::Type{SRID{T}}, X::SRID{U}) 
+Proj4.transform{T}(::Type{SRID_Pos{T}}, X::SRID_Pos{T}) = X
+function Proj4.transform{T, U}(::Type{SRID_Pos{T}}, X::SRID_Pos{U}) 
 	Y = Proj4.transform(get_projection(Val{U}), get_projection(Val{T}), Vector(X))
-	return SRID{T}(Y[1], Y[2], Y[3])
+	return SRID_Pos{T}(Y[1], Y[2], Y[3])
 end
-Base.convert{T}(::Type{SRID{T}}, X::SRID) = Proj4.transform(SRID{T}, X)
+Base.convert{T}(::Type{SRID_Pos{T}}, X::SRID_Pos) = Proj4.transform(SRID_Pos{T}, X)
 
 
 ######################################
@@ -86,17 +86,17 @@ Base.convert{T}(::Type{SRID{T}}, X::SRID) = Proj4.transform(SRID{T}, X)
 # LLA -> SRID
 function Proj4.transform{T}(::Type{Val{T}}, X::LLA, degs::Bool=true)  			         # this version is more natural to type
 	Y = Proj4.transform(Proj4.Projection(X), get_projection(Val{T}), [X.lon, X.lat, X.alt], !degs)   # proj4 is lon lat ordering
-	return SRID{T}(Y[1], Y[2], Y[3])
+	return SRID_Pos{T}(Y[1], Y[2], Y[3])
 end
-Proj4.transform{T}(::Type{SRID{T}}, X::LLA, degs::Bool=true) = Proj4.transform(Val{T}, X, degs) # but this version is the same syntax as the reverse of the transform
-Base.convert{T}(::Type{SRID{T}}, X::LLA) = Proj4.transform(SRID{T}, X)
+Proj4.transform{T}(::Type{SRID_Pos{T}}, X::LLA, degs::Bool=true) = Proj4.transform(Val{T}, X, degs) # but this version is the same syntax as the reverse of the transform
+Base.convert{T}(::Type{SRID_Pos{T}}, X::LLA) = Proj4.transform(SRID_Pos{T}, X)
 
 # SRID <- LLA 
-function Proj4.transform{T <: Datum}(::Type{LLA{T}}, X::SRID, degs::Bool=true)
+function Proj4.transform{T <: Datum}(::Type{LLA{T}}, X::SRID_Pos, degs::Bool=true)
 	Y = Proj4.transform(Proj4.Projection(X), lla_ellipse_proj(Val{T}), [X.x, X.y, X.z], !degs)   
 	return LLA{T}(Y[1], Y[2], Y[3])  
 end
-Base.convert{T <: Datum}(::Type{LLA{T}}, X::SRID) = Proj4.transform(LLA{T}, X)
+Base.convert{T <: Datum}(::Type{LLA{T}}, X::SRID_Pos) = Proj4.transform(LLA{T}, X)
 
 
 #######################################
@@ -107,17 +107,17 @@ Base.convert{T <: Datum}(::Type{LLA{T}}, X::SRID) = Proj4.transform(LLA{T}, X)
 # ECEF -> SRID
 function Proj4.transform{T}(::Type{Val{T}}, X::ECEF, degs::Bool=true)            # this version is more natural to type
 	Y = Proj4.transform(Proj4.Projection(X), get_projection(Val{T}), [X.x, X.y, X.z], !degs)   # proj4 is lon lat ordering
-	return SRID{T}(Y[1], Y[2], Y[3])
+	return SRID_Pos{T}(Y[1], Y[2], Y[3])
 end
-Proj4.transform{T}(::Type{SRID{T}}, X::ECEF, degs::Bool=true) = Proj4.transform(Val{T}, X, degs) # but this version is the same syntax as the reverse of the transform
-Base.convert{T}(::Type{SRID{T}}, X::ECEF) = Proj4.transform(SRID{T}, X)
+Proj4.transform{T}(::Type{SRID_Pos{T}}, X::ECEF, degs::Bool=true) = Proj4.transform(Val{T}, X, degs) # but this version is the same syntax as the reverse of the transform
+Base.convert{T}(::Type{SRID_Pos{T}}, X::ECEF) = Proj4.transform(SRID_Pos{T}, X)
 
 # SRID <- LLA 
-function Proj4.transform{T <: Datum}(::Type{ECEF{T}}, X::SRID, degs::Bool=true)
+function Proj4.transform{T <: Datum}(::Type{ECEF{T}}, X::SRID_Pos, degs::Bool=true)
 	Y = Proj4.transform(Proj4.Projection(X), ecef_ellipse_proj(Val{T}), [X.x, X.y, X.z], !degs)   
 	return LLA{T}(Y[1], Y[2], Y[3])  
 end
-Base.convert{T <: Datum}(::Type{ECEF{T}}, X::SRID) = Proj4.transform(LLA{T}, X)
+Base.convert{T <: Datum}(::Type{ECEF{T}}, X::SRID_Pos) = Proj4.transform(LLA{T}, X)
 
 
 
@@ -222,6 +222,13 @@ end
 Base.convert{T <: Datum}(::Type{LL}, ecef::ECEF{T}) = convert(LL{T}, ecef)
 Base.call{T <: LL}(::Type{T}, ecef::ECEF) = convert(LL, ecef)
 
+
+###################################
+### Pull the reference position from ###
+###################################
+
+# methods to pull the reference point from the template
+LLA_ref{T}(::ENU{LLA{T}}) = T
 
 
 ###############################

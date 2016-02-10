@@ -1,36 +1,46 @@
 module Geodesy
 
+import Base.show, Base.call, Base.convert
+
 export
 
 	# Abstract super types for point types
+	StaticWorldPosition, 
 	WorldPosition, 
     WorldSurfacePosition, 
     LocalPosition,
 
-    # Position types
-    ECEF,
-    ENU,
-    LL,
-    LLA,
-	SRID,
-	LLA_WGS84,   # typealias for LLA{WGS84_ELLIPSE}
-	ECEF_WGS84,  # typealias for ECEF{WGS84_ELLIPSE}
+    # Generic position types
+	LLA,
+	StaticLLA,
+	ECEF,
+	SRID_Pos,
+	LL,
+	ENU,
+	LLA_WGS84,   # typealias for LLA{WGS84}
+	ECEF_WGS84,  # typealias for ECEF{WGS84}
+	LLA_GDA94,   # typealias for StaticLLA{GDA94}
 
 	# convenience for using local points without a refernce point
-	LLA_Null,  
+	NullPos,  
 
     # Other types
     Bounds,
     Datum,
     Ellipsoid,
 
-    # Known ellipsoids
+    # Named datums (proably should be in its own module)
+	# static
     WGS84,
+    GRS80,
+	
+	# dynamic
+	GDA94,  
+
 
 	# Srid related
-	SRID_LLA_WGS84,      # typealias for the/a WGS84 (GPS) lat lon alt SRID code
-	SRID_ECEF_WGS84,     # typealias for the/a WGS84 (GPS) ECEF SRID code   
-	srid_params,         # get the authority and code from the type
+	SRID,
+	get_srid,              # get the authority and code from the type
 
     # Methods
     center,
@@ -38,25 +48,26 @@ export
     getX,
     getY,
     getZ,
-	getlat,
-	getlon,
-    inBounds
+	get_lat,
+	get_lon,
+	get_alt,
+	get_east,
+	get_north,
+	get_up
+    
 
-    #= Unexported / Experimental
-    ETRS89
-    NAD83
-    ED50
-    OSGB36
-    NAD27
+    
+	#=
+	inBounds,
+    decimal2dms,
+    dms2decimal,
 
-    decimal2dms
-    dms2decimal
+    haversine_distance,
 
-    haversine_distance
-
-    boundaryPoint
+    boundaryPoint,
     onBounds
     =#
+
 
 for f in ["datum", "point", "bounds", "utm", "transform", "vicenty", "distance"]
     include("$f.jl")

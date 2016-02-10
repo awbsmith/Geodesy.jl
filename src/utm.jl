@@ -8,12 +8,11 @@
 # and Geograhpiclib::MGRS::LatitudeBand()
 # http://geographiclib.sourceforge.net/2009-02/MGRS_8hpp_source.html
 # returns longitude zone and latitude band
-# TODO: is this correct for ellipsoids other than the wgs84 ellipsoid?
-function utmzone(LLA_wgs84::Union{LLA{WGS84}, LL{WGS84}})
+function utmzone(lla::Union{LLA, LL, StaticLLA})
 
     # int versions
-    ilat = floor(Int64, bound_thetad(LLA_wgs84.lat))
-    ilon = floor(Int64, bound_thetad(LLA_wgs84.lon))
+    ilat = floor(Int64, bound_thetad(lla.lat))
+    ilon = floor(Int64, bound_thetad(lla.lon))
 
     # get the latitude band
     band = max(-10, min(9,  fld((ilat + 80), 8) - 10))
@@ -30,18 +29,14 @@ function utmzone(LLA_wgs84::Union{LLA{WGS84}, LL{WGS84}})
 
 end
 
-macro add_type(str)
-	return 
-end
-
-# find the EPSG SRID for a utm projection of a specified wgs84 poistion
-function utm_srid(LLA_wgs84::Union{LLA{WGS84}, LL{WGS84}})
+# TODO: overload with other ellipsis as needed
+function utm_srid{T}(lla::Union{LLA{WGS84}, LL{WGS84}, StaticLLA{DynamicDatum{WGS84, T}}})
 
 	# get the band and zone
-	(zone, band) = utmzone(LLA_wgs84)
-    sym = symbol(@sprintf("EPSG32%i%02i", (band > 0 ? 6 : 7), zone))
-
-    return sym
+	(zone, band) = utmzone(lla)
+	auth = :EPSG
+	code = 32600 + (band > 0 ? 0 : 100) + zone
+    return SRID(auth, code)
 end
 
 

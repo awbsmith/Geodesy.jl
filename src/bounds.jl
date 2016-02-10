@@ -33,10 +33,10 @@ end
 function bounds{T <: Union{LLA, LL}}(X::Vector{T}, degs::Bool=true)
 
 	# unsmart method - build both paths around the circle to the first two points
-	(bbox_h1, bbox_h2) = init_bounds(X, degs)
+	bbox_hype = init_bounds(X, degs)
 
 	# and convert both hypotheses
-	bounds_from_bboxes(bbox_h1, bbox_h2, degs)
+	bounds_from_boxhyps(bbox_hype, degs)
 
 end
 
@@ -61,7 +61,7 @@ function center{T <: Union{LL, LLA}}(bounds::Bounds{T})
         x_mid = x_mid > 0 ? x_mid - 180 : x_mid + 180
     end
 
-    return T(y_mid, x_mid)
+    return T(x_mid, y_mid)
 end
 
 ### Check whether a location is within bounds ###
@@ -175,13 +175,13 @@ function init_bounds{T <: Union{LLA, LL}}(X::Vector{T}, degs::Bool=true)
 
 	end
 
-	return (bbox_h1, bbox_h2)
+	return [bbox_h1, bbox_h2]  # make a matrix out of it
 
 end
 
 # function to update a bounding box for an extra point
 # updates bbox_h1 and bbox_h1
-function updatebounds!{T <: Union{LLA, LL}}(bbox_h1::AbstractVector, bbox_h2::AbstractVector, X::Vector{T}, first::Int=1, degs::Bool=true)
+function updatebounds!{T <: Union{LLA, LL}}(bbox_hyp::AbstractMatrix, X::Vector{T}, first::Int=1, degs::Bool=true)
 
 	sc = degs ? pi / 180 : 1.0
 
@@ -190,60 +190,60 @@ function updatebounds!{T <: Union{LLA, LL}}(bbox_h1::AbstractVector, bbox_h2::Ab
 
 		# first coord
 		btheta = bound_theta(sc * getX(X[i]))
-        updatebounds_worker!(btheta, 1, bbox_h1)
-        updatebounds_worker!(btheta, 1, bbox_h2)
+        updatebounds_worker!(bbox_hyp, btheta, 1, 1)
+        updatebounds_worker!(bbox_hyp, btheta, 1, 2)
 
 		# second coord
 		btheta = bound_theta(sc * getY(X[i]))
-        updatebounds_worker!(btheta, 2, bbox_h1)
-        updatebounds_worker!(btheta, 2, bbox_h2)
+        updatebounds_worker!(bbox_hyp, btheta, 2, 1)
+        updatebounds_worker!(bbox_hyp, btheta, 2, 2)
 
 	end
 end
 
 # worker function for updating bounds
 # input theta should be -pi <= theta < pi
-function updatebounds_worker!(theta::Real, dim::Int, bbox::AbstractVector)
+function updatebounds_worker!(bbox::AbstractMatrix, theta::Real, dim::Int, hyp::Int)
 
 	# indexing shortcuts	
 	idx1 = (dim-1)*2+1
 	idx2 = (dim-1)*2+2
 
 	# clockwise distance from the lower bound
-    dlower = mod(theta - bbox[idx1], 2*pi)  # clockwise distance from lower bound
+    dlower = mod(theta - bbox[idx1, hyp], 2*pi)  # clockwise distance from lower bound
 
     # anticlockwise distance between bounds
-    dbound = bbox[idx2] - bbox[idx1]
+    dbound = bbox[idx2, hyp] - bbox[idx1, hyp]
 
     if (dlower > dbound)
 
         # clockwise distance from the upper bound
-        dupper = mod(theta - bbox[idx2], 2*pi)  
+        dupper = mod(theta - bbox[idx2, hyp], 2*pi)  
 
         # convert distance from the lower bound to anticlockwise
         dlower = 2*pi - dlower
 
         # pick the minimum adjustement to the bounds
         if (dlower < dupper)
-            bbox[idx1] -= dlower
+            bbox[idx1, hyp] -= dlower
         else
-            bbox[idx2] += dupper
+            bbox[idx2, hyp] += dupper
         end
     end
 end
 
 # function to turn bounding boxes for each hypothesis into a Bounding box type
-function  bounds_from_bboxes(bbox_h1::AbstractVector, bbox_h2::AbstractVector, degs::Bool=true)
+function  bounds_from_boxhyps(bbox_hyp::AbstractMatrix, degs::Bool=true)
 
 	sc = degs ? 180/pi : 1
 
 	# first dim
-	d1b = ((bbox_h1[2] - bbox_h1[1]) <= (bbox_h2[2] - bbox_h2[1]) ? bbox_h1[1:2] : bbox_h2[1:2]) 
+	d1b =  bbox_hyp[1:2, indmin(vec(bbox_hyp[2,:] - bbox_hyp[1,:]))]
 	d1b -= floor((mean(d1b)+pi) / (2*pi)) * 2*pi  # keep it pretty
 	d1b *= sc
 
 	# second dim
-	d2b = ((bbox_h1[4] - bbox_h1[3]) <= (bbox_h2[4] - bbox_h2[3]) ? bbox_h1[3:4] : bbox_h2[3:4]) 
+	d2b =  bbox_hyp[3:4, indmin(vec(bbox_hyp[4,:] - bbox_hyp[3,:]))]
 	d2b -= floor((mean(d2b)+pi) / (2*pi)) * 2*pi  # keep it pretty
 	d2b *= sc
 

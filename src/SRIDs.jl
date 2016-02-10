@@ -1,39 +1,31 @@
-#module SRIDs
 
-
-# all epsg / esri comes from proj4
-using Proj4
-
-const SRID_LLA_WGS84  = :EPSG4326   # EPSG code for lon lat wgs84 (GPS) 
-const SRID_ECEF_WGS84 = :EPSG4978   # EPSG code for ECEF wgs84 (GPS)
-
-
-# make a function that can retrieve the authority and code from the type
-function srid_params(srid::Symbol)
-	srid_str = string(srid)
-	authority = UTF8String(matchall(r"\D+", srid_str)[1])
-	code = matchall(r"\d+", srid_str)[1]
-	return (code, authority)
-end
+# auth is a symbol, code is an integer
+immutable SRID{auth, code} <: Datum  end  # good to have it as a subtype of datum? 
+show{auth, code}(io::IO, ::Type{SRID{auth, code}}) = print(io, "$(auth)$(code)")
 
 # calling this something different to not overload Proj4 stuff with generated functions
-@generated function get_projection{T}(::Type{Val{T}})
+@generated function get_projection{auth, code}(::Type{SRID{auth, code}})
 
-	println("Gen: $(T)")
+	println("Gen: $(SRID{auth, code})")
+	dict_sym = symbol(lowercase(string(auth)))
 
-	# break it into authority and code
-	(code, authority) = srid_params(T)
-	code = parse(Int, code)
+	
+	local dict
+	try # hasfield / isfield? 
+		dict = Proj4.(dict_sym)
+	catch
+		error("Proj4 does not know the SRID Authority: $(auth)")
+	end
 
-	check_dict = authority == "EPSG" ? Proj4.epsg : authority == "ESRI" ? Proj4.esri :error("Unknown SRID Authority")
-	if !haskey(check_dict, code)
-		error("Proj4 does not support: $(T)")
+	if !haskey(dict, code)
+		error("Proj4 does not know the code $(code) for authority $(auth)")
 	end
 
 	# add the projection info
-	P = Proj4.Projection(check_dict[code])
+	proj = Proj4.Projection(dict[code])
+	return :($proj)
 
 end
 
-#end
+
 
