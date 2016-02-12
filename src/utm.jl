@@ -8,7 +8,7 @@
 # and Geograhpiclib::MGRS::LatitudeBand()
 # http://geographiclib.sourceforge.net/2009-02/MGRS_8hpp_source.html
 # returns longitude zone and latitude band
-function utmzone(lla::Union{LLA, LL, StaticLLA})
+function utmzone(lla::Union{LLA, LL})
 
     # int versions
     ilat = floor(Int64, bound_thetad(lla.lat))
@@ -29,8 +29,8 @@ function utmzone(lla::Union{LLA, LL, StaticLLA})
 
 end
 
-# TODO: overload with other ellipsis as needed
-function utm_srid{T}(lla::Union{LLA{WGS84}, LL{WGS84}, StaticLLA{DynamicDatum{WGS84, T}}})
+# TODO: overload with other ellipses as needed
+function utm_srid(lla::Union{LLA{WGS84}, LL{WGS84}})
 
 	# get the band and zone
 	(zone, band) = utmzone(lla)

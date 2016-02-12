@@ -1,9 +1,10 @@
 
 # auth is a symbol, code is an integer
-immutable SRID{auth, code} <: Datum  end  # good to have it as a subtype of datum? 
+immutable SRID{auth, code}  end  # good to have it as a subtype of datum? 
 show{auth, code}(io::IO, ::Type{SRID{auth, code}}) = print(io, "$(auth)$(code)")
 
 # calling this something different to not overload Proj4 stuff with generated functions
+# TODO: check he generated function is doing what I hope (building and returning a reference to a static variable)...
 @generated function get_projection{auth, code}(::Type{SRID{auth, code}})
 
 	println("Gen: $(SRID{auth, code})")
@@ -22,7 +23,7 @@ show{auth, code}(io::IO, ::Type{SRID{auth, code}}) = print(io, "$(auth)$(code)")
 	end
 
 	# add the projection info
-	proj = Proj4.Projection(dict[code])
+	const proj = Proj4.Projection(dict[code])
 	return :($proj)
 
 end

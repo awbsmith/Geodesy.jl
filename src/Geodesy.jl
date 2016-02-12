@@ -1,42 +1,37 @@
 module Geodesy
 
-import Base.show, Base.call, Base.convert
+using Proj4 # Proj4 is the workhorse behine the module 
+
+import Base.show, Base.call, Base.convert, Proj4.transform
 
 export
 
-	# Abstract super types for point types
-	StaticWorldPosition, 
-	WorldPosition, 
-    WorldSurfacePosition, 
-    LocalPosition,
-
     # Generic position types
+	SRID_Pos,	
 	LLA,
-	StaticLLA,
-	ECEF,
-	SRID_Pos,
 	LL,
+	ECEF,
 	ENU,
+
 	LLA_WGS84,   # typealias for LLA{WGS84}
 	ECEF_WGS84,  # typealias for ECEF{WGS84}
-	LLA_GDA94,   # typealias for StaticLLA{GDA94}
 
-	# convenience for using local points without a refernce point
-	NullPos,  
+	# convenience for using points without a reference point
+	LL_NULL,
+	LLA_NULL,   
+	ECEF_NULL,  
+	ENU_NULL,
 
     # Other types
     Bounds,
-    Datum,
-    Ellipsoid,
 
-    # Named datums (proably should be in its own module)
-	# static
+    # Named pseudodatums
     WGS84,
     GRS80,
-	
-	# dynamic
 	GDA94,  
 
+	# transform function
+	transform, 
 
 	# Srid related
 	SRID,
@@ -69,7 +64,7 @@ export
     =#
 
 
-for f in ["datum", "point", "bounds", "utm", "transform", "vicenty", "distance"]
+for f in ["ellipsoids", "point", "bounds", "utm", "transform", "vicenty", "distance"]
     include("$f.jl")
 end
 
