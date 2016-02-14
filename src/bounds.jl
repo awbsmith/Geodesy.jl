@@ -11,7 +11,7 @@ type Bounds{T <: Union{LL, LLA, ENU}}
 end
 
 
-function Bounds(min_lat, max_lat, min_lon, max_lon)
+function Bounds(min_lon, max_lon, min_lat, max_lat)
 	
 	#= Removed -> I like to express min < max, and the lon range 179 -> 181 will fail this check
     if !(-90 <= min_lat <= max_lat <= 90 &&
@@ -21,7 +21,7 @@ function Bounds(min_lat, max_lat, min_lon, max_lon)
                             "Perhaps you're looking for Bounds{ENU}(...)"))
     end
 	=#
-    Bounds{LL{WGS84_ELLIPSE}}(min_lat, max_lat, min_lon, max_lon)
+    Bounds{LL{WGS84_ELLIPSE}}(min_lon, max_lon, min_lat, max_lat)
 end
 
 
@@ -50,7 +50,7 @@ function center(bounds::Bounds{ENU})
     x_mid = (bounds.min_x + bounds.max_x) / 2
     y_mid = (bounds.min_y + bounds.max_y) / 2
 
-    return ENU(x_mid, y_mid)
+    return ENU(x_mid, y_mid, 0.0)
 end
 
 function center{T <: Union{LL, LLA}}(bounds::Bounds{T})
@@ -106,7 +106,7 @@ function boundaryPoint{T <: Union{LL, LLA, ENU}}(p1::T, p2::T, bounds::Bounds{T}
         y = y1 + (y2 - y1) * (bounds.max_x - x1) / (x2 - x1)
     end
 
-    p3 = T(XY(x, y))
+    p3 = T(x, y)
     inBounds(p3, bounds) && return p3
 
     # Move y to y bound if segment crosses boundary
@@ -118,7 +118,7 @@ function boundaryPoint{T <: Union{LL, LLA, ENU}}(p1::T, p2::T, bounds::Bounds{T}
         y = bounds.max_y
     end
 
-    p3 = T(XY(x, y))
+    p3 = T(x, y)
     inBounds(p3, bounds) && return p3
 
     error("Failed to find boundary point.")

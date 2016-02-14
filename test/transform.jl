@@ -77,11 +77,11 @@ end
 ### Testing fixed relationships ###
 ###################################
 
-lla = LLA(42.3673, -71.0960, 0)
-lla_ref = LLA(42.36299, -71.09183, 0)
+lla = LLA_WGS84(-71.0960, 42.3673, 0)
+lla_ref = LLA_WGS84(-71.09183, 42.36299, 0)
 
 # LLA -> ECEF
-ecef_ref = ECEF(1529073.1560519305, -4465040.019013103, 4275835.339260309)
+ecef_ref = ECEF_WGS84(1529073.1560519305, -4465040.019013103, 4275835.339260309)
 @xyz_approx_eq ECEF(lla) ecef_ref
 
 #LLA -> ENU
@@ -120,21 +120,21 @@ ecef2osgb = LLA{OSGB36}(ecef)
 randLLA() = (rand() - .5) * 178, (rand() - .5) * 360, (rand() - .5) * 18000
 
 for _ = 1:50_000
-    y, x, z = randLLA()
+    x, y, z = randLLA()
     min_x = x < -179 ? x + 359 : x - 1
     max_x = x >  179 ? x - 359 : x + 1
-    lla = LLA(y, x, z)
-    lla_bounds = Bounds{LLA}(y - 1, y + 1, min_x, max_x)
-    ll = LL(y, x)
-    ll_bounds = Bounds(y - 1, y + 1, min_x, max_x)
+    lla = LLA(x, y, z)
+    lla_bounds = Bounds{LLA}(min_x, max_x, y - 1, y + 1)
+    ll = LL(x, y)
+    ll_bounds = Bounds(min_x, max_x, y - 1, y + 1)
 
     y, x, z = randLLA()
     min_x = x < -179 ? x + 359 : x - 1
     max_x = x >  179 ? x - 359 : x + 1
-    lla2 = LLA(y, x, z)
-    lla2_bounds = Bounds{LLA}(y - 1, y + 1, min_x, max_x)
-    ll2 = LL(y, x)
-    ll2_bounds = Bounds(y - 1, y + 1, min_x, max_x)
+    lla2 = LLA(x, y, z)
+    lla2_bounds = Bounds{LLA}(min_x, max_x, y - 1, y + 1)
+    ll2 = LL(x, y)
+    ll2_bounds = Bounds(min_x, max_x, y - 1, y + 1)
 
     ecefa = ECEF(lla)
     ecef = ECEF(ll)

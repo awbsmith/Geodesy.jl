@@ -13,9 +13,9 @@ ECEF(x, y, 0.0)
 
 # get* methods
 
-ll = LL(y, x)
-lla = LLA(y, x, rand())
-@test LLA(getY(lla), getX(lla), getZ(lla)) == lla
+ll = LL(x, y)
+lla = LLA(x, y, rand())
+@test LLA(getX(lla), getY(lla), getZ(lla)) == lla
 @test getY(ll) == y
 @test getX(ll) == x
 @test_throws MethodError getZ(ll)

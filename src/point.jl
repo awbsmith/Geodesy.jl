@@ -1,6 +1,6 @@
 using FixedSizeArrays  # to do maths on points
 
-
+#  TODO: work out why this module kills the convert methods table
 
 ###############################
 # Build some sort of heirarchy
@@ -48,6 +48,7 @@ typealias LLA_WGS84 LLA{WGS84}
 typealias LLA_NULL LLA{UnknownEllipse}
 
 # Default to an unknown ellipse
+Base.call(::Type{LLA}, lon::Real, lat::Real) = LLA_NULL(lon, lat, 0.0)
 Base.call(::Type{LLA}, lon::Real, lat::Real, height::Real) = LLA_NULL(lon, lat, height)
 
 # make some conversions more usable
@@ -134,7 +135,7 @@ typealias LL_WGS84 LL{WGS84}
 typealias LL_NULL LL{UnknownEllipse}
 
 # Default to an unknown ellipse
-Base.call(::Type{LL}, lon::Real, lat::Real) = LLA_NULL(lon, lat, 0.0)
+Base.call(::Type{LL}, lon::Real, lat::Real) = LL_NULL(lon, lat)
 
 # make some conversions more usable
 # TODO: Add srids for all pseudo datums
@@ -183,7 +184,8 @@ immutable ENU{T} <: LocalPosition   # T should be either UnknownRef or a LLA pos
 end
 
 typealias ENU_NULL ENU{UnknownRef}
-call(::Type{ENU}, e::Real, n::Real, u::Real) = ENU_NULL(e,n,u)  						    # allow default constructuction with no reference position
+call(::Type{ENU}, e::Real, n::Real) = ENU_NULL(e,n,0.0)  						    # idk
+call(::Type{ENU}, e::Real, n::Real, u::Real) = ENU_NULL(e,n,u)  					# allow default constructuction with no reference position
 
 
 #ENU(x, y) = ENU(x, y, 0.0)
@@ -215,6 +217,10 @@ getZ(lla::LLA) = lla.alt
 getX(enu::ENU) = enu.east
 getY(enu::ENU) = enu.north
 getZ(enu::ENU) = enu.up
+
+getX(ecef::ECEF) = ecef.x
+getY(ecef::ECEF) = ecef.y
+getZ(ecef::ECEF) = ecef.z
 
 get_lon(X::SRID) = X.x
 get_lat(X::SRID) = X.y

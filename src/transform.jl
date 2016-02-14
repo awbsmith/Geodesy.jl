@@ -1,13 +1,13 @@
 
 
 
+
+#=
 ### Allow stripping the reference out of the templates         ###
-convert{T}(::Type{LLA_NULL}, lla::Type{LLA{T}}) = LLA_NULL(lla.lat, lla.lon, lla.alt)		#
-convert{T}(::Type{LL_NULL}, ll::Type{LL{T}}) = LL_NULL(lla.lat, lla.lon)		#
-convert{T}(::Type{ECEF_NULL}, lla::Type{ECEF{T}}) = ECEF_NULL(lla.lat, lla.lon, lla.alt)		#  
-convert{T}(::Type{ENU_NULL}, enu::Type{ENU{T}}) = ENU_NULL(enu.east, enu.north, enu.up)		# allow stripping the reference position out of the template
-
-
+convert{T <: AbstractEllipse}(::Type{LLA_NULL}, lla::Type{LLA{T}}) = LLA_NULL(lla.lat, lla.lon, lla.alt)		#
+convert{T <: AbstractEllipse}(::Type{LL_NULL}, ll::Type{LL{T}}) = LL_NULL(lla.lat, lla.lon)		#
+convert{T <: AbstractEllipse}(::Type{ECEF_NULL}, lla::Type{ECEF{T}}) = ECEF_NULL(lla.lat, lla.lon, lla.alt)		#  
+convert{T <: AbstractEllipse}(::Type{ENU_NULL}, enu::Type{ENU{T}}) = ENU_NULL(enu.east, enu.north, enu.up)		# allow stripping the reference position out of the template
 
 
 # more coercion than conversion?
@@ -15,6 +15,8 @@ Base.convert{T}(::Type{LL{T}}, lla::LLA{T}) = LL{T}(lla.lon, lla.lat)
 Base.convert{T}(::Type{LL}, lla::LLA{T}) = LL{T}(lla.lon, lla.lat)
 Base.convert{T}(::Type{LLA{T}}, ll::LL{T}) = LLA{T}(lla.lon, lla.lat, 0.0)
 Base.convert{T}(::Type{LLA}, ll::LL{T}) = LLA{T}(lla.lon, lla.lat, 0.0)
+=#
+
 
 
 
@@ -73,8 +75,8 @@ end
 transform{T <: SRID}(::Type{SRID_Pos{T}}, X::SRID_Pos) = transform(T, X)
 
 # no convert cases
-transform{T}(::Type{T}, X::SRID_Pos{T}) = X  # no convert
-transform{T}(::Type{SRID_Pos{T}}, X::SRID_Pos{T}) = X		   		   
+#transform{T}(::Type{T}, X::SRID_Pos{T}) = X  # no convert
+#transform{T}(::Type{SRID_Pos{T}}, X::SRID_Pos{T}) = X		   		   
 
 
 
