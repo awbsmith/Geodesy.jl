@@ -100,8 +100,8 @@ lla = LLA_WGS84(-71.0960, 42.3673, 0)
 ecef_ref = ECEF_WGS84(1529073.1560519305, -4465040.019013103, 4275835.339260309)
 
 # check projections are as expected
-@test Geodesy.get_proj4_str(SRID(LLA_WGS84)) == "+proj=longlat +datum=WGS84 +no_defs"
-@test Geodesy.get_proj4_str(SRID(ECEF_WGS84)) == "+proj=geocent +datum=WGS84 +units=m +no_defs"
+@test Geodesy.proj4_str(SRID(LLA_WGS84)) == "+proj=longlat +datum=WGS84 +no_defs"
+@test Geodesy.proj4_str(SRID(ECEF_WGS84)) == "+proj=geocent +datum=WGS84 +units=m +no_defs"
 
 # and make sure they behave as anticipated
 lla_srid = SRID_Pos{SRID(lla)}(lla...)

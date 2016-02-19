@@ -8,9 +8,9 @@ let lla = LLA(1, 2, 3)
     @test_throws MethodError distance(lla, lla)
 end
 
-randLLA() = LLA((rand() - .5) * 180,
-                (rand() - .5) * 360,
-                (rand() - .5) * 18_000)
+randLLA() = LLA{WGS84}((rand() - .5) * 360,
+				       (rand() - .5) * 180,
+                       (rand() - .5) * 18_000)
 
 # Test ECEF/ENU distance equivalence
 
@@ -85,8 +85,8 @@ for (lat1, lon1, azi1, lat2, lon2, azi2, s12, a12, m12, area) in [
     (60.893175111551, 0, 90.030887879944, -60.893175111602473374, 179.705866045884665835, 89.969112291280908219, 19995946.5267377, 179.99999990435001247, .0152818050346, -43716837097.405323),
     (57.297318482011, 0, 90.006736496503, -57.297318482011214432, 179.673356341455815136, 89.993263506332003021, 19994084.1111944, 179.999999998173649615, .000475461712, -9532089026.025471)
 ]
-    p1 = LL(lat1, lon1)
-    p2 = LL(lat2, lon2)
+    p1 = LL{WGS84}(lon1, lat1)
+    p2 = LL{WGS84}(lon2, lat2)
 
     try
         vi = Geodesy.vicentys_inverse(p1, p2)
@@ -140,8 +140,8 @@ for t in [
 ]
     lat1, lat2, dlon, azi1, azi2, s12 = testvals(t)
 
-    p1 = LL{ED50}(lat1, 0)
-    p2 = LL{ED50}(lat2, dlon)
+    p1 = LL{ED50}(0, lat1)
+    p2 = LL{ED50}(dlon, lat2)
 
     try
         vi = Geodesy.vicentys_inverse(p1, p2)

@@ -17,7 +17,7 @@ end
 
 # haversine (spherical)
 
-function haversine_distance{T <: LL}(a::T, b::T)
+function haversine_distance{T}(a::LL{T}, b::LL{T})
     r = 6_371_009 # reduces average rather than maximum error
 
     # Using deg2rad is faster and a tiny bit less accurate than sind/cosd --
@@ -40,4 +40,4 @@ end
 
 # vicenty's (ellipsoidal)
 
-distance{T <: LL}(a::T, b::T) = vicentys_inverse(a, b)[1]
+distance{T}(a::LL{T}, b::LL{T}) = vicentys_inverse(a, b)[1]

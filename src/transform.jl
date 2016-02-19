@@ -46,7 +46,7 @@ end
 ##############################
 
 
-@inline function lla_to_ecef{T <: ECEF, U <: LL_fam}(::Type{T}, ll::U, d::Ellipsoid)
+function lla_to_ecef{T <: ECEF, U <: LL_fam}(::Type{T}, ll::U, d::Ellipsoid)
     ϕdeg, λdeg, h = ll.lat, ll.lon, typeof(ll) <: LLA ? ll.alt : 0.0
 
     sinϕ, cosϕ = sind(ϕdeg), cosd(ϕdeg)
