@@ -35,12 +35,17 @@ export
 
 	# Srid related
 	SRID,
-	get_srid,              # get the authority and code from the type
+
+	# utm related
+	utmzone, 
 
     # Methods
     center,
     distance,
-    getX,
+    
+
+	# accessors
+	getX,
     getY,
     getZ,
 	get_lat,
@@ -48,23 +53,20 @@ export
 	get_alt,
 	get_east,
 	get_north,
-	get_up
-    
+	get_up,
 
+	decimal2dms,
+    dms2decimal
     
 	#=
 	inBounds,
-    decimal2dms,
-    dms2decimal,
-
     haversine_distance,
-
     boundaryPoint,
     onBounds
     =#
 
 
-for f in ["ellipsoids", "point", "bounds", "utm", "transform", "vicenty", "distance"]
+for f in ["srids", "ellipsoids", "point", "known_srids", "utm", "point_methods", "transform", "bounds", "vicenty", "distance"]
     include("$f.jl")
 end
 

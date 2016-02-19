@@ -1,140 +1,53 @@
 
-
-
-
-#=
-### Allow stripping the reference out of the templates         ###
-convert{T <: AbstractEllipse}(::Type{LLA_NULL}, lla::Type{LLA{T}}) = LLA_NULL(lla.lat, lla.lon, lla.alt)		#
-convert{T <: AbstractEllipse}(::Type{LL_NULL}, ll::Type{LL{T}}) = LL_NULL(lla.lat, lla.lon)		#
-convert{T <: AbstractEllipse}(::Type{ECEF_NULL}, lla::Type{ECEF{T}}) = ECEF_NULL(lla.lat, lla.lon, lla.alt)		#  
-convert{T <: AbstractEllipse}(::Type{ENU_NULL}, enu::Type{ENU{T}}) = ENU_NULL(enu.east, enu.north, enu.up)		# allow stripping the reference position out of the template
-
-
-# more coercion than conversion?
-Base.convert{T}(::Type{LL{T}}, lla::LLA{T}) = LL{T}(lla.lon, lla.lat)
-Base.convert{T}(::Type{LL}, lla::LLA{T}) = LL{T}(lla.lon, lla.lat)
-Base.convert{T}(::Type{LLA{T}}, ll::LL{T}) = LLA{T}(lla.lon, lla.lat, 0.0)
-Base.convert{T}(::Type{LLA}, ll::LL{T}) = LLA{T}(lla.lon, lla.lat, 0.0)
-=#
-
-
-
-
-
-####################################
-### Function to perform transformations                                  ###
-### Defining this so I can worry about what should be a "convert" later  ###
-####################################
-
-# do nothing conversions
-transform{T}(::Type{LLA{T}}, X::LLA{T}) = X
-transform{T}(::Type{LL{T}}, X::LL{T}) = X		   		   
-transform{T}(::Type{ECEF{T}}, X::ECEF{T}) = X
-transform{T}(::Type{ENU{T}}, X::ENU{T}) = X
-
-
-# vector format conversions
-function transform{T <: Union{WorldPosition, WorldSurfacePosition, LocalPosition}, U <: AbstractVector}(::Type{T}, X::U)
-	Xout = Vector{T}(length(X))
-	for (i, Xp) in enumerate(X)
-		Xout[i] = transform(T, Xp)
-	end
-	return Xout
-end
-
-
-#
-# add some constructor methods while we're here
-#
-call{T <: WorldPosition, U <: WorldPosition}(::Type{T}, X::U) = transform(T, X)
-call{T <: LocalPosition, U <: WorldPosition}(::Type{T}, X::U) = transform(T, X)
-call{T <: WorldPosition, U <: LocalPosition}(::Type{T}, X::U) = transform(T, X)
-
-
-####################################
-### Proj4 backed conversions
-### Define first so we can overload
-####################################
-
-# build methods to get a proj 4 projection (a coordinate reference system) for stuff we know about
-get_projection{T <: Union{WorldPosition, WorldSurfacePosition}}(X::T) = get_projection(get_srid(X))
-
-
-
-
 ##############################################
 ### SRID "datum" conversions               ###
 ### (other point types don't have datums)  ###
 ### Done by Proj4                          ###
 ##############################################
 
-function transform{T <: SRID}(::Type{T}, X::SRID_Pos) 
-	Y = Proj4.transform(get_projection(X), get_projection(T), Vector(X))
-	return SRID_Pos{T}(Y[1], Y[2], Y[3])
+
+function transform{T <: SRID, U <: SRID}(::Type{T}, X::SRID_Pos{U}) 
+	Y = Proj4.transform(get_projection(U), get_projection(T), Vector(X))
+	out = SRID_Pos{T}(Y[1], Y[2], Y[3])
 end
-transform{T <: SRID}(::Type{SRID_Pos{T}}, X::SRID_Pos) = transform(T, X)
-
-# no convert cases
-#transform{T}(::Type{T}, X::SRID_Pos{T}) = X  # no convert
-#transform{T}(::Type{SRID_Pos{T}}, X::SRID_Pos{T}) = X		   		   
+transform{T <: SRID, U <: SRID}(::Type{SRID_Pos{T}}, X::SRID_Pos{U}) = transform(T, X)
 
 
-
-
-
-
-
-######################################
-### SRID to / from LLA coordinates ###
-######################################
-
-# LLA -> SRID
-function transform{T <: SRID}(::Type{T}, X::LLA, degs::Bool=true)  			                                # this version is more natural to type
-	Y = Proj4.transform(get_projection(X), get_projection(T), [X.lon, X.lat, X.alt], !degs)                 # proj4 is lon lat ordering
-	return SRID_Pos{T}(Y[1], Y[2], Y[3])
+# X -> SRID
+function transform{T <: SRID, U <: Proj4_fam}(::Type{T}, X::U)
+	iU = add_param(U)
+	if T == SRID(iU)
+		out = SRID_Pos{T}(X[1], X[2], X[3])  # not actually a transform.  Should probably be a convert method?
+	else
+		Y = Proj4.transform(get_projection(iU), get_projection(T), [X[1], X[2], X[3]], false)	
+		out = SRID_Pos{T}(Y[1], Y[2], Y[3])
+	end
+	return out
 end
-transform{T <: SRID}(::Type{SRID_Pos{T}}, X::LLA, degs::Bool=true) = Proj4.transform(T, X, degs)      # but this version is the same syntax as the reverse of the transform
+transform{T <: SRID}(::Type{SRID_Pos{T}}, X::Union{ECEF, LLA}) = Proj4.transform(T, X)      # but this version is the same syntax as the reverse of the transform
 
 
-# SRID -> LLA 
-function transform{T <: LLA}(::Type{T}, X::SRID_Pos, degs::Bool=true)
-	Y = Proj4.transform(get_projection(X), get_projection(T), [X.x, X.y, X.z], !degs)   
-	return T(Y[1], Y[2], Y[3])  
+# SRID -> X
+function transform{T <: Proj4_fam, U <: SRID}(::Type{T}, X::SRID_Pos{U})
+	iT = add_param(T)
+	if SRID(iT) == U
+		out = iT(X[1], X[2], X[3])  # not actually a transform.  Should probably be a convert method?
+	else
+		Y = Proj4.transform(get_projection(U), get_projection(iT), [X[1], X[2], X[3]], false)	
+		out = iT(Y[1], Y[2], Y[3])
+	end
+	return out
 end
-
-
-
-
-#######################################
-### SRID to / from ECEF coordinates ###
-#######################################
-
-
-# ECEF -> SRID
-function transform{T <: SRID}(::Type{T},  X::ECEF, degs::Bool=true)                     # this version is more natural to type
-	Y = Proj4.transform(get_projection(X), get_projection(T), [X.x, X.y, X.z], !degs)   # proj4 is lon lat ordering
-	return SRID_Pos{T}(Y[1], Y[2], Y[3])
-end
-transform{T <: SRID}(::Type{SRID_Pos{T}}, X::ECEF, degs::Bool=true) = Proj4.transform(T, X, degs)      # but this version is the same syntax as the reverse of the transform
-
-
-# SRID -> ECEF 
-function transform{T <: ECEF}(::Type{T}, X::SRID_Pos, degs::Bool=true)
-	Y = Proj4.transform(get_projection(X), get_projection(T), [X.x, X.y, X.z], !degs)   
-	return T(Y[1], Y[2], Y[3])  
-end
-
-
 
 
 
 ##############################
-### LL to ECEF coordinates ###
+### LLA to ECEF coordinates ###
 ##############################
 
-function transform{T}(::Type{ECEF{T}}, ll::Union{LL{T}, LLA{T}})
-    ϕdeg, λdeg, h = ll.lat, ll.lon, typeof(ll) <: LLA ? ll.alt : 0
-    d = ellipsoid(T)
+
+@inline function lla_to_ecef{T <: ECEF, U <: LL_fam}(::Type{T}, ll::U, d::Ellipsoid)
+    ϕdeg, λdeg, h = ll.lat, ll.lon, typeof(ll) <: LLA ? ll.alt : 0.0
 
     sinϕ, cosϕ = sind(ϕdeg), cosd(ϕdeg)
     sinλ, cosλ = sind(λdeg), cosd(λdeg)
@@ -145,20 +58,28 @@ function transform{T}(::Type{ECEF{T}}, ll::Union{LL{T}, LLA{T}})
     y = (N + h) * cosϕ * sinλ
     z = (N * (1 - d.e²) + h) * sinϕ
 
-    return ECEF{T}(x, y, z)
+    return T(x, y, z)
 end
-transform{T}(::Type{ECEF_NULL}, ll::Union{LL{T}, LLA{T}}) = convert(ECEF_NULL, transform(ECEF{T}, ll))
-transform{T}(::Type{ECEF}, ll::Union{LL{T}, LLA{T}}) = transform(ECEF{T}, ll)
+
+# dont allow datum / ellipse transforms within Geodesy
+transform{T <: KnownEllipse, U <: KnownEllipse}(::Type{ECEF{T}}, lla::Union{LLA{U}, LL{U}}) = error("Ellipse / datum transforms should be be done explicitly via SRID_Pos point types\nIf you're sure what you're doing is correct you can transform the input position to type LLA_NULL")
+
+# must specify the ellipse somewhere
+transform{T <: UnknownEllipse}(::Type{ECEF{T}}, lla::Union{LLA{T}, LL{T}}) = error("An ellipse must be specified in either the input or the output types")
+
+# other combos
+transform{T <: KnownEllipse}(::Type{ECEF{T}}, lla::Union{LLA{T}, LL{T}}) =  lla_to_ecef(ECEF{T}, lla, ellipsoid(T))
+transform{T <: KnownEllipse}(::Type{ECEF_NULL}, lla::Union{LLA{T}, LL{T}}) = lla_to_ecef(ECEF_NULL, lla, ellipsoid(T))
+transform{T <: KnownEllipse}(::Type{ECEF{T}}, lla::LLA_NULL) = lla_to_ecef(ECEF{T}, lla, ellipsoid(T))
+transform{T <: KnownEllipse}(::Type{ECEF}, lla::Union{LLA{T}, LL{T}}) = lla_to_ecef(ECEF{T}, lla, ellipsoid(T))
 
 
-
-##############################
+###############################
 ### ECEF to LLA coordinates ###
-##############################
+###############################
 
-function transform{T}(::Type{LLA{T}}, ecef::ECEF{T})
+function ecef_to_lla{T <: LLA, U <: AbstractEllipse}(::Type{T}, ecef::ECEF{U}, d::Ellipsoid)
     x, y, z = ecef.x, ecef.y, ecef.z
-    d = ellipsoid(T)
 
     p = hypot(x, y)
     θ = atan2(z*d.a, p*d.b)
@@ -168,26 +89,31 @@ function transform{T}(::Type{LLA{T}}, ecef::ECEF{T})
     N = d.a / sqrt(1 - d.e² * sin(ϕ)^2)  # Radius of curvature (meters)
     h = p / cos(ϕ) - N
 
-	lla = LLA{T}(rad2deg(λ), rad2deg(ϕ), h)
-
+	lla = T(rad2deg(λ), rad2deg(ϕ), h)
 	
     return lla
 end
-transform{T}(::Type{LLA_NULL}, ecef::ECEF{T}) = convert(LLA_NULL, transform(LLA{T}, ecef))
-transform(::Type{LLA}, ecef::ECEF) = convert(LLA_NULL, ecef)
+
+# dont allow datum / ellipse transforms
+transform{T <: KnownEllipse, U <: KnownEllipse}(::Type{LLA{T}}, ecef::ECEF{U}) = error("Ellipse / datum transforms should be be done explicitly via SRID_Pos point types\nIf you're sure what you're doing is correct you can transform the input position to type ECEF_NULL")
+
+# must specify the ellipse somewhere
+transform{T <: UnknownEllipse}(::Type{LLA{T}}, ecef::ECEF{T}) = error("An ellipse must be specified in either the input or the output types")
+
+# other combos
+transform{T <: KnownEllipse}(::Type{LLA{T}}, ecef::ECEF{T}) = ecef_to_lla(LLA{T}, ecef, ellipsoid(T))
+transform{T <: KnownEllipse}(::Type{LLA_NULL}, ecef::ECEF{T}) = ecef_to_lla(LLA_NULL, ecef, ellipsoid(T))
+transform{T <: KnownEllipse}(::Type{LLA{T}}, ecef::ECEF_NULL) = ecef_to_lla(LLA{T}, ecef, ellipsoid(T))
+transform{T <: KnownEllipse}(::Type{LLA}, ecef::ECEF{T}) = ecef_to_lla(LLA{T}, ecef, ellipsoid(T))
+
+# Should this exist?
+transform{T <: AbstractEllipse}(::Type{LL{T}}, ecef::ECEF) = transform(LL{T}, ecef_to_lla(LLA{T}, ecef, ellipsoid(T)))
+transform{T <: AbstractEllipse}(::Type{LL}, ecef::ECEF{T}) = transform(LL{T}, ecef_to_lla(LLA{T}, ecef, ellipsoid(T)))
 
 
 
-# Should these exist?
-transform{T}(::Type{LL{T}}, ecef::ECEF) = convert(LL{T}, transform(LLA{T}, ecef))
-transform(::Type{LL}, ecef::ECEF) = convert(LL_NULL, transform(LLA_NULL, ecef))
-
-
-
-
-
-# TESTING - compare accuracy of this method to the normal one 
-function transform_test{T}(::Type{LLA{T}}, ecef::ECEF{T})
+# TESTING - compare accuracy of this method to ecef_to_lla using Geographic lib as a ground truth
+function ecef_to_lla_test{T}(::Type{LLA{T}}, ecef::ECEF{T})
 
 	d = ellipsoid(T)
 
@@ -223,29 +149,23 @@ end
 
 
 
-
-
 ###############################
 ### ECEF to ENU coordinates ###
 ###############################
 
-# methods to pull the reference point from the template
-LLA_ref{T}(::ENU{T}) = T
-ELL_type{T}(::LLA{T}) = T
-
 
 # make the two parameter forms default to using a point as a reference
-transform{T <: LLA}(::Type{ENU{T}}, ecef::ECEF) = ENU{T}(ecef_to_enu(ecef, T)...)                    # user specified, wonderful
+transform{T <: LLA}(::Type{ENU{T}}, ecef::ECEF) = ENU{T}(ecef_to_enu(ecef, T)...)             # user specified, wonderful
 transform{T}(::Type{ENU}, ecef::ECEF{T}) = ENU{transform(LLA{T}, ecef)}(0.0, 0.0, 0.0)        # assume the input ecef point is the 0
 
 # return the null reference point variety
-transform{T}(::Type{ENU_NULL}, ecef::ECEF{T}, ll_ref::LLA{T}) = ENU_NULL(ecef_to_enu(ecef, ll_ref)...)
-transform{T}(::Type{ENU}, ecef::ECEF{T}, ll_ref::LLA{T}) = ENU{ll_ref}(ecef_to_enu(ecef, ll_ref)...)
-transform{T <: LLA}(::Type{ENU{T}}, ecef::ECEF, ll_ref::LLA) = error("Don't specify both the reference point in the type and provide it as an argument")
+transform{T}(::Type{ENU_NULL}, ecef::ECEF{T}, lla_ref::Union{LLA{T}, LL{T}}) = ENU_NULL(ecef_to_enu(ecef, lla_ref)...)
+transform{T}(::Type{ENU}, ecef::ECEF{T}, lla_ref::Union{LLA{T}, LL{T}}) = ENU_NULL(ecef_to_enu(ecef, lla_ref)...)
+transform{T <: LLA}(::Type{ENU{T}}, ecef::ECEF, lla_ref::LLA) = error("Don't specify both the reference point in the type and provide it as an argument")
 
 
 # worker function
-function ecef_to_enu{T}(ecef::ECEF{T}, ll_ref::LLA{T})
+function ecef_to_enu{T}(ecef::ECEF{T}, ll_ref::Union{LLA{T}, LL{T}})
     ϕdeg, λdeg = ll_ref.lat, ll_ref.lon
 
     ecef_ref = transform(ECEF{T}, ll_ref)
@@ -269,6 +189,41 @@ function ecef_to_enu{T}(ecef::ECEF{T}, ll_ref::LLA{T})
     return (east, north, up)
 end
 
+###############################################
+### Transformation matrices for ECEF -> ENU ###
+###############################################
+
+""" 
+Returns the rotation and translation to transform an ECEF point to a point
+centered on lla_ref in the ENU frame:
+
+(R, t) = transform_params(ENU, lla_ref)
+
+X_enu = ENU(R * Vec(X_ecef) + t)  # using FixedSizeArrays
+ 
+"""
+function transform_params{T}(::Type{ENU}, lla_ref::Union{LLA{T}, LL{T}})
+	
+	ϕdeg, λdeg = lla_ref.lat, lla_ref.lon
+
+	# Compute rotation matrix
+    sinλ, cosλ = sind(λdeg), cosd(λdeg)
+    sinϕ, cosϕ = sind(ϕdeg), cosd(ϕdeg)
+
+	# Reference
+	ecef_ref = ECEF{T}(lla_ref)
+
+	R = @fsa([-sinλ        cosλ        0.0;
+			  -cosλ*sinϕ   -sinλ*sinϕ    cosϕ;
+			   cosλ*cosϕ    sinλ*cosϕ    sinϕ])
+
+	t = -R * Vec(ecef_ref.x, ecef_ref.y, ecef_ref.z)
+
+	return (R, t)
+	
+end
+transform_params{T <: ENU}(::Type{T}) = transform_params(ENU, LLA_ref{T})
+
 
 
 ###############################
@@ -276,22 +231,23 @@ end
 ###############################
 
 # convert to ECEF when the LLA reference position is included in the ENU template
-transform{T, U <: LLA}(::Type{ECEF{T}}, enu::ENU{U}) = transform(ECEF{T}, ECEF{ELL_type{LLA_ref{U}}}(enu_to_ecef(enu, U)...))
-transform{T <: LLA}(::Type{ECEF}, enu::ENU{T}) = ECEF{ELL_type{T}}(enu_to_ecef(enu, T)...)
+transform{T, U}(::Type{ECEF{T}}, enu::ENU{U}) = transform(ECEF{T}, enu_to_ecef(ECEF{ELL_type(U)}, enu, U))
+transform{T}(::Type{ECEF}, enu::ENU{T}) = enu_to_ecef(ECEF{ELL_type(T)}, enu, T)
 
 
 # convert to ECEF when the LLA reference position is not included in the ENU template
-transform{T}(::Type{ECEF}, enu::ENU, lla_ref::LLA{T}) = ECEF{T}(enu_to_ecef(enu, lla_ref)...)
-transform{T}(::Type{ECEF{T}}, enu::ENU, lla_ref::LLA{T}) = ECEF{T}(enu_to_ecef(enu, lla_ref)...)
+transform{T}(::Type{ECEF}, enu::ENU, lla_ref::Union{LLA{T}, LL{T}}) = enu_to_ecef(ECEF{T}, enu, lla_ref)
+transform{T}(::Type{ECEF{T}}, enu::ENU, lla_ref::Union{LLA{T}, LL{T}}) = enu_to_ecef(ECEF{T}, enu, lla_ref)
+transform{T}(::Type{ECEF_NULL}, enu::ENU, lla_ref::Union{LLA{T}, LL{T}}) = enu_to_ecef(ECEF_NULL, enu, lla_ref)
 
 
 
 # convert to ECEF when no LLA reference point is included in the template for the ENU input
-function enu_to_ecef{T}(enu::ENU, ll_ref::Union{LL{T}, LLA{T}})
+function enu_to_ecef{T <: ECEF, U}(::Type{T}, enu::ENU, ll_ref::Union{LL{U}, LLA{U}})
     
 	ϕdeg, λdeg = ll_ref.lat, ll_ref.lon
 
-    ecef_ref = transform(ECEF{T}, ll_ref)
+    ecef_ref = transform(ECEF{U}, ll_ref)
 
     # Compute rotation matrix
     sinλ, cosλ = sind(λdeg), cosd(λdeg)
@@ -309,7 +265,7 @@ function enu_to_ecef{T}(enu::ENU, ll_ref::Union{LL{T}, LLA{T}})
     Y = ecef_ref.y + Δy
     Z = ecef_ref.z + Δz
 
-    return (X,Y,Z)
+    return T(X,Y,Z)
 end
 
 
@@ -321,23 +277,36 @@ end
 
 # no LLA reference provided in the ENU type so a LLA ref must be supplied
 # N.B. this will ignore the LLA refernce in ENU template
-function transform_matrix{T}(dest::Type{ECEF{T}}, lla_ref::LLA{T})
+""" 
+Returns the rotation and translation to transform a point in the ENU frame
+centerd on lla_ref into an ECEF point:
+
+(R, t) = transform_params(ECEF, lla_ref)  
+
+X_ecef = ECEF(R * Vec(X_enu) + t)  # using FixedSizeArrays
+ 
+"""
+function transform_params{T}(::Type{ECEF{T}}, lla_ref::Union{LLA, LL})
 	
-	ϕdeg, λdeg = ll_ref.lat, ll_ref.lon
+	ϕdeg, λdeg = lla_ref.lat, lla_ref.lon
 
 	# Compute rotation matrix
     sinλ, cosλ = sind(λdeg), cosd(λdeg)
     sinϕ, cosϕ = sind(ϕdeg), cosd(ϕdeg)
 
 	# Reference
-	ecef_ref = ECEF{T}(ll_ref)
+	ecef_ref = ECEF{T}(lla_ref)
 
-	Tmat= @fsa([-sinλ  -cosλ*sinϕ    cosλ*cosϕ    ecef_ref.x;
-			     cosλ  -sinλ*sinϕ    sinλ*cosϕ    ecef_ref.y;
-			     0.0    cosϕ           sinϕ            ecef_ref.z
-			     0.0    0.0         0.0         1.0])
+	R = @fsa([-sinλ  -cosλ*sinϕ    cosλ*cosϕ;
+			   cosλ  -sinλ*sinϕ    sinλ*cosϕ;
+			   0.0    cosϕ            sinϕ])
 
+	t = Vec(ecef_ref.x, ecef_ref.y, ecef_ref.z)
+
+	return (R, t)
+	
 end
+transform_params{T}(::Type{ECEF}, lla_ref::Union{LLA{T}, LL{T}}) = transform_params(ECEF{T}, lla_ref)
 
 
 ##############################
@@ -345,13 +314,15 @@ end
 ##############################
 
 # make the two parameter forms default to using a point as a reference
-transform{T,U}(::Type{ENU{T}}, lla::LLA{U}) = ENU{T}(ecef_to_enu(transform(ECEF{U}, lla), T)...)   # user specified, wonderful
-transform{T}(::Type{ENU}, lla::LLA{T}) = ENU{lla}(0.0,0.0,0.0)                                     # assume the input point is the 0
+transform{T,U}(::Type{ENU{T}}, lla::Union{LLA{U}, LL{U}}) = ENU{T}(ecef_to_enu(transform(ECEF{U}, lla), T)...)   # user specified, wonderful
+transform{T}(::Type{ENU}, lla::Union{LLA{T}, LL{T}}) = ENU{lla}(0.0,0.0,0.0)                                     # assume the input point is the 0
 
 # return the null reference point variety
-transform{T}(::Type{ENU_NULL}, lla::LLA{T}, ll_ref::LLA{T}) = ENU_NULL(ecef_to_enu(transform(ECEF{T}, lla), ll_ref)...)
-transform{T}(::Type{ENU}, lla::LLA{T}, ll_ref::LLA{T}) = ENU{ll_ref}(ecef_to_enu(transform(ECEF{T}, lla), ll_ref)...)
+transform{T}(::Type{ENU_NULL}, lla::Union{LLA{T}, LL{T}}, ll_ref::Union{LLA{T}, LL{T}}) = ENU_NULL(ecef_to_enu(transform(ECEF{T}, lla), ll_ref)...)
+transform{T}(::Type{ENU}, lla::Union{LLA{T}, LL{T}}, ll_ref::Union{LLA{T}, LL{T}}) = ENU_NULL(ecef_to_enu(transform(ECEF{T}, lla), ll_ref)...)
 transform{T <: LLA}(::Type{ENU{T}}, lla::LLA, ll_ref::LLA) = error("Don't specify both the reference point in the type and provide it as an argument")
+
+
 
 
 
@@ -359,14 +330,21 @@ transform{T <: LLA}(::Type{ENU{T}}, lla::LLA, ll_ref::LLA) = error("Don't specif
 ### ENU to LLA coordinates   ###
 ################################
 
-# convert to ECEF when the LLA reference position is included in the ENU template
-transform{T, U <: LLA}(::Type{LLA{T}}, enu::ENU{U}) = transform(LLA{T}, ECEF{ELL_type{LLA_ref{U}}}(enu_to_ecef(enu, U)...))
-transform{T <: LLA}(::Type{LLA}, enu::ENU{T}) = LLA{ELL_type{LLA_ref{T}}}(enu_to_ecef(enu, T)...)
+# convert to LLA when the LLA reference position is included in the ENU template
+transform{T, U <: LLA}(::Type{LLA{T}}, enu::ENU{U}) = transform(LLA{T}, enu_to_ecef(ECEF{ELL_type(LLA_ref{U})}, enu, U))
+transform{T <: LLA}(::Type{LLA}, enu::ENU{T}) = enu_to_ecef(LLA{ELL_type(LLA_ref{T})}, enu, T)
 
 
-# convert to ECEF when the LLA reference position is not included in the ENU template
-transform{T}(::Type{LLA}, enu::ENU, lla_ref::LLA{T}) = transform(LLA{T}, ECEF{T}(enu_to_ecef(enu, lla_ref)...))
-transform{T}(::Type{LLA{T}}, enu::ENU, lla_ref::LLA{T}) = transform(LLA{T}, ECEF{T}(enu_to_ecef(enu, lla_ref)...))
+# convert to LLA when the LLA reference position is not included in the ENU template
+transform{T}(::Type{LLA}, enu::ENU, lla_ref::Union{LLA{T}, LL{T}}) = transform(LLA{T}, enu_to_ecef(ECEF{T}, enu, lla_ref))
+transform{T}(::Type{LLA{T}}, enu::ENU, lla_ref::Union{LLA{T}, LL{T}}) = transform(LLA{T}, enu_to_ecef(ECEF{T}, enu, lla_ref))
+
+
+# Should this exist?
+transform{T <: AbstractEllipse}(::Type{LL{T}}, enu::ENU, lla_ref::Union{LLA{T}, LL{T}}) = transform(LL{T}, enu_to_ecef(ECEF{T}, enu, lla_ref))
+transform{T <: AbstractEllipse}(::Type{LL}, enu::ENU, lla_ref::Union{LLA{T}, LL{T}}) = transform(LL{T}, enu_to_ecef(ECEF{T}, enu, lla_ref))
+
+
 
 #############################################
 ### Decimal <=> Degrees, Minutes, Seconds ###
@@ -387,36 +365,4 @@ function dms2decimal(d::Float64, m::Float64, s::Float64)
 end
 
 
-################################
-### LL to ENU Bounds objects ###
-################################
 
-# there's not an unambiguous conversion, but for now,
-# returning the minimum bounds that contain all points contained
-# by the input bounds
-function ENU{T <: Union{LL, LLA}}(bounds::Bounds{T}, ll_ref::T = center(bounds))
-
-    max_x = max_y = -Inf
-    min_x = min_y = Inf
-
-    xs = [bounds.min_x, bounds.max_x]
-    ys = [bounds.min_y, bounds.max_y]
-    if bounds.min_y < 0.0 < bounds.max_y
-        push!(ys, 0.0)
-    end
-    ref_x = getX(ll_ref)
-    if bounds.min_x < ref_x < bounds.max_x ||
-       (bounds.min_x > bounds.max_x && !(bounds.min_x >= ref_x >= bounds.max_x))
-        push!(xs, ref_x)
-    end
-
-    for x_ll in xs, y_ll in ys
-        pt = ENU(T(y_ll, x_ll), ll_ref)
-        x, y = getX(pt), getY(pt)
-
-        min_x, max_x = min(x, min_x), max(x, max_x)
-        min_y, max_y = min(y, min_y), max(y, max_y)
-    end
-
-    return Bounds{ENU}(min_y, max_y, min_x, max_x)
-end

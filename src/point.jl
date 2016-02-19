@@ -16,7 +16,7 @@ abstract  WorldSurfacePosition  <: FixedVectorNoTuple{2, Float64}
 # abstract form for local coordinates (needs a refernce to transform to world)
 abstract  LocalPosition  <: FixedVectorNoTuple{3, Float64}
 
-# Heights relative to something...
+# Heights relative to something... (basis for a compond coordinate reference system)
 abstract  WorldHeight <: Real
 
 
@@ -26,9 +26,6 @@ abstract  WorldHeight <: Real
 ########################
 ### World locations  ###
 ########################
-
-# by default we don't know
-get_srid{T <: WorldPosition}(::Type{T}) = error("No known SRID / datum for a $(T)")
 
 
 # proj4 backs this and is lon lat ordering
@@ -46,17 +43,6 @@ end
 # useful shortcuts
 typealias LLA_WGS84 LLA{WGS84}
 typealias LLA_NULL LLA{UnknownEllipse}
-
-# Default to an unknown ellipse
-Base.call(::Type{LLA}, lon::Real, lat::Real) = LLA_NULL(lon, lat, 0.0)
-Base.call(::Type{LLA}, lon::Real, lat::Real, height::Real) = LLA_NULL(lon, lat, height)
-
-# make some conversions more usable
-# TODO: Add srids for all pseudo datums
-get_srid(::Type{LLA_WGS84}) = SRID{:EPSG, 4326}        # EPSG code for lon lat wgs84 (GPS).  This may be updated later
-
-
-
 
 
 
@@ -85,16 +71,6 @@ end
 typealias ECEF_WGS84 ECEF{WGS84}
 typealias ECEF_NULL ECEF{UnknownEllipse}
 
-# Default to an unknown ellipse
-Base.call(::Type{ECEF}, x::Real, y::Real, z::Real) = ECEF_NULL(x, y, z)
-
-# make some conversions more usable
-# TODO: Add srids for all pseudo datums
-typealias ECEF_WGS84_SRID SRID{:EPSG, 4978}  	# WGS84 ecef
-get_srid(::Type(ECEF_WGS84)) = ECEF_WGS84_SRID    # EPSG code for ecef wgs84 (GPS).  This may be updated later
-
-
-
 
 ### SRID based points (converions will use Proj4)
 ### N.B, for lat lon style SRIDs,  x -> lon, y -> lat (or getlat() and getlon())
@@ -109,7 +85,10 @@ end
 Base.call(::Type{SRID_Pos}, x::Real, y::Real, z::Real) = error("Must specify an SRID")
 
 # convenience for getting the srid from an SRID point
-get_srid{T}(X::SRID_Pos{T}) = T
+SRID{T}(X::SRID_Pos{T}) = T
+SRID{T}(::Type{SRID_Pos{T}}) = T
+
+
 
 
 
@@ -134,12 +113,7 @@ end
 typealias LL_WGS84 LL{WGS84}
 typealias LL_NULL LL{UnknownEllipse}
 
-# Default to an unknown ellipse
-Base.call(::Type{LL}, lon::Real, lat::Real) = LL_NULL(lon, lat)
 
-# make some conversions more usable
-# TODO: Add srids for all pseudo datums
-get_srid(::Type(LL_WGS84)) = LLA_WGS84_SRID    # Used the LLA SRID
 
 
 ##########################
@@ -152,9 +126,29 @@ immutable EllipHeight{T <: Ellipsoid} <: WorldHeight
 end
 
 # TODO: custom geoid heights
-#immutable GeoidHeight{T <: GeoidFiles} <: WorldHeight
-#	h::Float64
-#end
+immutable GeoidHeight{T <: AbstractGeoid} <: WorldHeight
+	h::Float64
+end
+
+
+
+######################################################################################
+### Experimental, compound coordinate reference systems (CCRS) 					   ###
+### Its not intended to work with these, just transform them to/from other types   ###	
+######################################################################################
+
+"""
+Abstract type for compound coordinate reference system (i.e. height is not ellipsoidal)
+"""
+abstract CCRS_Pos{T, U} <: WorldPosition
+
+# use the SRID style because we need to Proj4 to handle the Geoid anyway
+immutable Geoidal_SRID{T <: SRID, U <: AbstractGeoid} <: CCRS_Pos{T, U}
+	x::Float64
+	y::Float64
+	z::Float64
+end
+
 
 
 ###############################
@@ -188,6 +182,11 @@ call(::Type{ENU}, e::Real, n::Real) = ENU_NULL(e,n,0.0)  						    # idk
 call(::Type{ENU}, e::Real, n::Real, u::Real) = ENU_NULL(e,n,u)  					# allow default constructuction with no reference position
 
 
+# to add in the template parameter when its omitted
+add_param(::Type{ENU}) = ENU_NULL
+add_param{T}(::Type{ENU{T}}) = ENU{T}
+
+
 #ENU(x, y) = ENU(x, y, 0.0)
 
 # TODO: wanted?
@@ -201,36 +200,6 @@ call(::Type{ENU}, e::Real, n::Real, u::Real) = ENU_NULL(e,n,u)  					# allow def
 
 # retrieve datums and ellipsoids
 ellipsoid{T <: AbstractEllipse}(::Union{LLA{T}, LL{T}, ECEF{T}}) = ellipsoid(T)           # reference ellipsoid for the position
-
-
-
-
-### get*
-# Point translators
-getX(ll::LL) = ll.lon
-getY(ll::LL) = ll.lat
-
-getX(lla::LLA) = lla.lon
-getY(lla::LLA) = lla.lat
-getZ(lla::LLA) = lla.alt
-
-getX(enu::ENU) = enu.east
-getY(enu::ENU) = enu.north
-getZ(enu::ENU) = enu.up
-
-getX(ecef::ECEF) = ecef.x
-getY(ecef::ECEF) = ecef.y
-getZ(ecef::ECEF) = ecef.z
-
-get_lon(X::SRID) = X.x
-get_lat(X::SRID) = X.y
-get_alt(X::SRID) = X.z
-
-get_east(X::SRID) = X.x
-get_north(X::SRID) = X.y
-get_up(X::SRID) = X.z
-
-
 
 
 

@@ -1,10 +1,6 @@
 
 # parameters used for distance calculations and coordinate system transforms
 
-# include SRID (the only datum representation has)
-include("SRIDs.jl")
-
-
 #
 # Ellipsoids 
 #
@@ -13,8 +9,11 @@ include("SRIDs.jl")
 # known make the ellipse type
 abstract AbstractEllipse 
 
+abstract KnownEllipse <: AbstractEllipse 
+
 immutable UnknownEllipse <: AbstractEllipse end
 
+# display ???'s for unkown ellipse for compactness
 ellipsoid(::Type{UnknownEllipse}) = error("The ellipse is unknown")
 show(io::IO, ::Type{UnknownEllipse}) = print(io, "???")
 
@@ -28,9 +27,11 @@ immutable Ellipsoid
     e′²::Float64                         # Second eccentricity squared
 end
 
+
 # build alias's for known ellipses
-immutable CustomEllipse{T <: Ellipsoid} <: AbstractEllipse end
+immutable CustomEllipse{T <: Ellipsoid} <: KnownEllipse end
 ellipsoid{T <: Ellipsoid}(::Type{CustomEllipse{T}}) = T # grab the ellipse from the type
+
 
 function Ellipsoid(; a::AbstractString="", b::AbstractString="", f_inv::AbstractString="")
     if isempty(a) || isempty(b) == isempty(f_inv)
@@ -67,31 +68,31 @@ const eClarke1866 = Ellipsoid(a = "6378206.4",   b = "6356583.8")
 const eAiry       = Ellipsoid(a = "6377563.396", b = "6356256.909")
 
 
-# build alias's for known ellipses
-abstract KnownEllipse <: AbstractEllipse
 
+# build alias's for known ellipses
+abstract DefinedEllipse <: KnownEllipse
 
 
 # A few common ellipses
-immutable WGS84_ELLIPSE <: KnownEllipse end
+immutable WGS84_ELLIPSE <: DefinedEllipse end
 ellipsoid(::Type{WGS84_ELLIPSE}) = eWGS84
 
-immutable GRS80_ELLIPSE <: KnownEllipse end
+immutable GRS80_ELLIPSE <: DefinedEllipse end
 ellipsoid(::Type{GRS80_ELLIPSE}) = eGRS80
 
-immutable HAYFORD_ELLIPSE <: KnownEllipse end
+immutable HAYFORD_ELLIPSE <: DefinedEllipse end
 ellipsoid(::Type{HAYFORD_ELLIPSE}) = eHayford
 
-immutable AIRY_ELLIPSE <: KnownEllipse end
+immutable AIRY_ELLIPSE <: DefinedEllipse end
 ellipsoid(::Type{AIRY_ELLIPSE}) = eAiry
 
-immutable CLARKE66_ELLIPSE <: KnownEllipse end
+immutable CLARKE66_ELLIPSE <: DefinedEllipse end
 ellipsoid(::Type{CLARKE66_ELLIPSE}) = eClarke1866
 
 
 
 # build alias's for known datums 
-immutable PsuedoDatum{T} <: AbstractEllipse end
+immutable PsuedoDatum{T} <: KnownEllipse end
 
 # And make some datums based on them
 typealias WGS84 PsuedoDatum{WGS84_ELLIPSE}     
@@ -106,32 +107,32 @@ show(io::IO, ::Type{ED50}) = print(io, "ED50")
 typealias OSGB36 PsuedoDatum{AIRY_ELLIPSE}             # Britania
 show(io::IO, ::Type{OSGB36}) = print(io, "OSGB36")
 
-
-
-# The below are dynamic datums (a fixed point on the earth's surface doesn't move with continental drift)
-
-# Asutralia
-typealias GDA94  PsuedoDatum{GRS80_ELLIPSE}
-show(io::IO, ::Type{GDA94}) = print(io, "GRS80:1994")
-
-# Europia
-typealias ETRS89 PsuedoDatum{GRS80_ELLIPSE}                  
-show(io::IO, ::Type{GDA94}) = print(io, "GRS80:1989")
-
-# Americania
-typealias NAD83 PsuedoDatum{GRS80_ELLIPSE}
-show(io::IO, ::Type{NAD83}) = print(io, "NAD83:1983")
-
-
 # grab the ellipse from the type
 ellipsoid{T}(::Type{PsuedoDatum{T}}) = ellipsoid(T) 
 
 
+# The below are dynamic datums (a fixed point on the earth's surface doesn't move with continental drift)
+# (aka the datum is dynamic allowing points to be statis)
 
+immutable PsuedoDynDatum{T} <: KnownEllipse end
 
+# Asutralia
+typealias GDA94  PsuedoDynDatum{GRS80_ELLIPSE}
+show(io::IO, ::Type{GDA94}) = print(io, "GRS80:1994")
+ref_date(::Type{GDA94}) = DateTime(1994)
 
+# Europia
+typealias ETRS89 PsuedoDynDatum{GRS80_ELLIPSE}                  
+show(io::IO, ::Type{ETRS89}) = print(io, "GRS80:1989")
+ref_date(::Type{ETRS89}) = DateTime(1989)
 
+# Americania
+typealias NAD83 PsuedoDynDatum{GRS80_ELLIPSE}
+show(io::IO, ::Type{NAD83}) = print(io, "NAD83:1983")
+ref_date(::Type{NAD83}) = DateTime(1983)
 
+# grab the ellipse from the type
+ellipsoid{T}(::Type{PsuedoDynDatum{T}}) = ellipsoid(T) 
 
 
 
@@ -147,19 +148,8 @@ geoid_file(::Type{AusGeoid09}) = "ausgeoid09.pgm"
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+# dev tool, find stuff in the Proj4 dicts
+# e.g find_match(Proj4.epsg, [r"proj=longlat", r"datum=WGS84"])
 function find_match{T,U}(p4_dict::Dict{T,U}, exprs)
 	
 	if !isa(exprs, Vector)
