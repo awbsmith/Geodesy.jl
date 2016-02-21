@@ -84,7 +84,7 @@ call{T <: Vec2_fam}(::Type{T}, x::Real, y::Real, z::Real) = add_param(T)(x,y)
 ####################################
 
 # build methods to get a proj 4 projection (a coordinate reference system) for stuff we know about
-get_projection{T <: Union{WorldPosition, WorldSurfacePosition}}(X::T) = get_projection(SRID(T))
+get_projection{T <: Union{WorldPosition, WorldSurfacePosition}}(X::T) = get_projection(T)
 get_projection{T <: Union{WorldPosition, WorldSurfacePosition}}(::Type{T}) = get_projection(SRID(T))
 
 
@@ -165,7 +165,11 @@ function call{T <: Geodesy_fam, U <: Union{Val{:col}, Val{:row}}}(::Type{T}, X::
 	n = (U == Val{:col}) ? size(X,2) : size(X,1)
 	Xout = Vector{oT}(n)
 	for i = 1:n
-		Xout[i] = (U == Val{:col}) ? oT(X[1,i], X[2,i], X[3,i]) : oT(X[i,1], X[i,2], X[i,3])
+		if T <: Vec2_fam
+			Xout[i] = (U == Val{:col}) ? oT(X[1,i], X[2,i]) : oT(X[i,1], X[i,2])
+		else
+			Xout[i] = (U == Val{:col}) ? oT(X[1,i], X[2,i], X[3,i]) : oT(X[i,1], X[i,2], X[i,3])	
+		end
 	end
 	return Xout
 end
@@ -218,7 +222,7 @@ end
 
 
 # when converting vectors of srid points, do it with a single call to Proj4.transform
-# I haven't been able to make repeated calls to Proj4.transform work
+# I haven't been able to make repeated calls to Proj4.transform work efficiently
 function proj4_vectorized{T <: Proj4_fam, U <: Proj4_fam}(::Type{T}, X::Vector{U})
 
 	if !((T <: SRID_Pos) || (U <: SRID_Pos))
@@ -230,7 +234,7 @@ function proj4_vectorized{T <: Proj4_fam, U <: Proj4_fam}(::Type{T}, X::Vector{U
 	@inbounds for i = 1:length(X)
 		mat[i, 1] = X[i][1]
 		mat[i, 2] = X[i][2]
-		mat[i, 3] = X[i][3]
+		mat[i, 3] = U <: Vec2_fam ? X[i][3] : 0.0
 	end
 
 	# perform it
