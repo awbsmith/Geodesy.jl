@@ -9,21 +9,21 @@ Coordinate systems `LL`, `LLA`, `ECEF`, `SRID_Pos`, and `ENU` are supported.
 
 `LL`, `LLA`, and `ECEF` are parameterized by a reference ellipsoid (not a datum) and are the intended type(s) to work with while using this package. 
 
-The `SRID_Pos` type is parameterized by an `SRID` which identifies the coordinate system and datum. Transformations involving an `SRID_Pos` point are performed by the [Proj4](https://github.com/FugroRoames/Proj4.jl) package.  This point type is designed to be used when importing / exporting data, as well as perfroming non-trivial operations suchs as datum shifting.
+The `SRID_Pos` type is parameterized by an `SRID` which identifies the coordinate system and datum. Transformations involving an `SRID_Pos` point are performed by the [Proj4](https://github.com/FugroRoames/Proj4.jl) package.  This point type is designed to be used when importing / exporting data, as well as performing non-trivial operations such as datum shifting.
 
-The `ENU` local point type may be parameterized by an `LL` point describing the origin of the coordinate system if desired
+The `ENU` local point type may be parameterized by an `LL` point describing the origin of the coordinate system (if desired).
 
 The intended workflow when using this package is to:
 
-1. import data using the `SRID_Pos` point type (if not already in a native type)
+1. Import data using the `SRID_Pos` point type (if not already in a native type)
 
-2. transform these points into this package's native types (`LL`, `LLA`, `ECEF`, `ENU`),
+2. Transform these points into this package's native types (`LL`, `LLA`, `ECEF`, `ENU`),
 
 3. Process the data
 
-4. export data ausing `SRID_Pos` point type (if a non native export type is required)
+4. Export data ausing `SRID_Pos` point type (if a non native export type is required)
 
 
-Example usage is shown in example_usage.jl
+Example usage is given in quick_guide.jl
 
 
