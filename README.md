@@ -14,10 +14,15 @@ The `SRID_Pos` type is parameterized by an `SRID` which identifies the coordinat
 The `ENU` local point type may be parameterized by an `LL` point describing the origin of the coordinate system if desired
 
 The intended workflow when using this package is to:
+
 1. import data using the `SRID_Pos` point type (if not already in a native type)
+
 2. transform these points into this package's native types (`LL`, `LLA`, `ECEF`, `ENU`),
+
 3. Process the data
+
 4. export data ausing `SRID_Pos` point type (if a non native export type is required)
+
 
 Example usage is shown in example_usage.jl
 
