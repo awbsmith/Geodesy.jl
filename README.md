@@ -5,11 +5,11 @@
 
 Work with points defined in various coordinate systems. The code has been split out from [OpenStreetMap.jl](https://github.com/tedsteiner/OpenStreetMap.jl), and functionality expanded.
 
-Coordinate systems `LL`, `LLA`, `ECEF`, `SRID_Pos`, `ENU` are supported. Transforms between between those types are supported.
+Coordinate systems `LL`, `LLA`, `ECEF`, `SRID_Pos`, and `ENU` are supported.
 
-While `LL`, `LLA`, and `ECEF` are parameterized by a reference ellipsoid (not a datum) and are the intended type to work with while using this package. 
+`LL`, `LLA`, and `ECEF` are parameterized by a reference ellipsoid (not a datum) and are the intended type(s) to work with while using this package. 
 
-The `SRID_Pos` type (parameterized by an `SRID` which identifies the coordinate system and datum). Transformations involving an `SRID_Pos` point are performed by the [Proj4](https://github.com/FugroRoames/Proj4.jl) package.
+The `SRID_Pos` type is parameterized by an `SRID` which identifies the coordinate system and datum. Transformations involving an `SRID_Pos` point are performed by the [Proj4](https://github.com/FugroRoames/Proj4.jl) package.  This point type is designed to be used when importing / exporting data, as well as perfroming non-trivial operations suchs as datum shifting.
 
 The `ENU` local point type may be parameterized by an `LL` point describing the origin of the coordinate system if desired
 
