@@ -103,7 +103,7 @@ srid_out = Geodesy.utm_srid(lla_ref)     # Geodesy can only do this for the WGS8
 
 # whether ECEF is truly an ECEF point depends on the datum
 # e.g.: 
-lla_osgb36 = LLA{Geodesy.OSGB36}(0, 0, 0)  		# OSGB36 is a good match to the geoid in the UK but not elsewhere
+lla_osgb36 = LLA{Geodesy.OSGB36}(0, 0, 0)  		# OSGB36 is a good match to the Earth in the UK but not elsewhere
 ecef_fake = transform(ECEF, lla_osgb36) 		# = 6.377563396e6, 0.0, 0.0
 # isn't a true ECEF point because the OSGB36 ellipsoid isn't geocentric.
 
