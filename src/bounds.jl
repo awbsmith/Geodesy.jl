@@ -20,10 +20,8 @@ call(::Type{Bounds{ENU}}, min_x, max_x, min_y, max_y) = Bounds{add_param(ENU)}(m
 
 # allow integer indexing
 # TODO: learn the Julia convention for this, there must be a not horrible way...
-Base.getindex{T}(bbox::Bounds{T}, idx::Int) = bbox.(fieldnames(Bounds{T})[idx])
-function setindex!{T}(bbox::Bounds{T}, Val::Real, idx::Int)
-	bbox.(fieldnames(Bounds{T})[idx]) = Val
-end
+Base.getindex{T}(bbox::Bounds{T}, idx::Int) = getfield(bbox, idx)
+Base.setindex!{T}(bbox::Bounds{T}, val::Real, idx::Int) = setfield!(bbox, idx, Float64(val))  # why does Julia have reversed order for these?
 
 # for degs / rads conversions
 *{T}(bbox::Bounds{T}, val::Real) = Bounds{T}(bbox.min_x * val, bbox.max_x * val, bbox.min_y * val, bbox.max_y * val)

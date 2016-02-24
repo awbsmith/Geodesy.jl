@@ -25,11 +25,13 @@ function proj4_str{auth, code}(::Type{SRID{auth, code}})
 	try # hasfield / isfield? 
 		dict = Proj4.(dict_sym)
 	catch
-		error("Proj4 does not know the SRID Authority: $(auth)")
+		error("Proj4 does not know the SRID Authority: $(auth).\nPlease overload Geodesy.proj4_str to return a the correct Proj4 string for SRID{$(auth), $(code)}\n" * 
+			  "Geodesy.proj4_str(::Type{SRID{$(auth), $(code)}}) = <Proj4 projection string>")
 	end
 
 	if !haskey(dict, code)
-		error("Proj4 does not know the code $(code) for authority $(auth)")
+		error("Proj4 does not know the code $(code) for authority $(auth).\nPlease overload Geodesy.proj4_str to return a the correct Proj4 string for SRID{$(auth), $(code)}\n" * 
+			  "Geodesy.proj4_str(::Type{SRID{$(auth), $(code)}}) = <Proj4 projection string>")
 	end
 
 	return dict[code]::ASCIIString

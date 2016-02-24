@@ -3,7 +3,7 @@
 # TODO: Check if these are actually correct!
 
 # by default we don't know
-SRID{T <: WorldPosition}(::Type{T}) = error("No known SRID / datum for a $(T)")
+SRID{T <: WorldPosition}(::Type{T}) = error("No known SRID / datum for a $(T).\nPlease overload the SRID constructor to return an SRID for the $(T) point type:\nSRID(::Type{$(T)}) = SRID{..., ...}")
 SRID{T <: WorldPosition}(::T) = SRID(T)
 
 
@@ -12,7 +12,7 @@ SRID{T <: WorldPosition}(::T) = SRID(T)
 ############
 
 # LLA
-#SRID(::Type{LLA_WGS84}) = SRID{:EPSG, 4326}        # EPSG code for lon lat wgs84 (GPS).  
+SRID(::Type{LLA_WGS84}) = SRID{:EPSG, 4326}        # EPSG code for lon lat wgs84 (GPS).  
 
 # ECEF
 SRID(::Type{ECEF_WGS84}) = SRID{:EPSG, 4978}       # EPSG code for ecef wgs84 (GPS).  

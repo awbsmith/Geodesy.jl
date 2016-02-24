@@ -7,7 +7,7 @@ import Base.show, Base.call, Base.convert, Proj4.transform
 export
 
     # Generic position types
-	SRID_Pos,	
+	CRS,	
 	LLA,
 	LL,
 	ECEF,
@@ -66,7 +66,7 @@ export
     =#
 
 
-for f in ["srids", "ellipsoids", "point", "known_srids", "utm", "point_methods", "transform", "bounds", "vicenty", "distance"]
+for f in ["srids", "ellipsoids", "geodesy_types", "known_srids", "utm", "point_methods", "transform", "bounds", "vicenty", "distance"]
     include("$f.jl")
 end
 

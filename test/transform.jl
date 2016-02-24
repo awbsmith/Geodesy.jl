@@ -78,12 +78,21 @@ lla = LLA_WGS84(-71.0960, 42.3673, 0)
 lla_ref = LLA_WGS84(-71.09183, 42.36299, 0)
 
 # LLA -> ECEF
-ecef_ref = ECEF_WGS84(1529073.1560519305, -4465040.019013103, 4275835.339260309)
-@xyz_approx_eq ECEF(lla) ecef_ref
+ecef = ECEF_WGS84(1529073.1560519305, -4465040.019013103, 4275835.339260309)
+@xyz_approx_eq ECEF(lla) ecef
 
 #LLA -> ENU
-enu_ref = ENU(-343.493749083977, 478.764855466788, -0.027242885224325164)
-@xyz_approx_eq_eps ENU(lla, lla_ref) enu_ref 1e-8
+enu = ENU(-343.493749083977, 478.764855466788, -0.027242885224325164)
+@xyz_approx_eq_eps ENU(lla, lla_ref) enu 1e-8
+@xyz_approx_eq_eps ENU{lla_ref}(lla) enu 1e-8
+
+# ECEF -> ENU
+@xyz_approx_eq_eps ENU(ecef, lla_ref) enu 1e-8
+@xyz_approx_eq_eps ENU{lla_ref}(ecef) enu 1e-8
+
+# ENU -> LLA
+@xyz_approx_eq_eps LLA(enu, lla_ref) lla 1e-8
+@xyz_approx_eq_eps LLA(ENU{lla_ref}(enu...)) lla 1e-8
 
 # Bounds{LLA} -> Bounds{ENU}
 bounds = Bounds{LLA_WGS84}(-71.1, -71.094, 42.365, 42.3695)
@@ -92,7 +101,7 @@ bounds_enu_ref = Bounds{ENU}(-247.1268196136449, 247.1268196138187, -249.9308954
 
 
 ###################################
-### Check SRIDs / Proj4         ###
+### Check CRS / Proj4         ###
 ###################################
 
 # make sure the above are still valid
@@ -104,16 +113,16 @@ ecef_ref = ECEF_WGS84(1529073.1560519305, -4465040.019013103, 4275835.339260309)
 @test Geodesy.proj4_str(SRID(ECEF_WGS84)) == "+proj=geocent +datum=WGS84 +units=m +no_defs"
 
 # and make sure they behave as anticipated
-lla_srid = SRID_Pos{SRID(lla)}(lla...)
-ecef_srid = SRID_Pos{SRID(ecef_ref)}(ecef_ref...)
+lla_crs = CRS{SRID(lla)}(lla...)
+ecef_crs = CRS{SRID(ecef_ref)}(ecef_ref...)
 
 # Non SRID -> SRID
-@xyz_approx_eq_eps SRID_Pos{SRID(ecef_ref)}(lla_srid) ecef_ref 1e-8
-@xyz_approx_eq_eps SRID_Pos{SRID(lla)}(ecef_srid) lla 1e-8
+@xyz_approx_eq_eps CRS{SRID(ecef_ref)}(lla_crs) ecef_ref 1e-8
+@xyz_approx_eq_eps CRS{SRID(lla)}(ecef_crs) lla 1e-8
 
 # SRID -> Non SRID
-@xyz_approx_eq_eps ECEF(LLA{WGS84}(lla_srid...)) ECEF{WGS84}(lla) 1e-8
-@xyz_approx_eq_eps ECEF{WGS84}(ecef_srid...) ecef_ref 1e-8
+@xyz_approx_eq_eps ECEF(LLA{WGS84}(lla_crs...)) ECEF{WGS84}(lla) 1e-8
+@xyz_approx_eq_eps ECEF{WGS84}(ecef_crs...) ecef_ref 1e-8
 
 
 #######################################
@@ -139,7 +148,7 @@ ecef2osgb = LLA{OSGB36}(ecef)
 #######################################
 
 srid = SRID{:EPSG, 32755}     # WGS 84 / UTM zone 55 S (approx Sydney, Australia)
-typealias UTM SRID_Pos{srid}  # type alias for convenience
+typealias UTM55S CRS{srid}    # type alias for convenience
 
 # get the cnrs (in LLA)
 bounds = Bounds{LLA_WGS84}(144.0, 150.0, -80.0, 0.0)
@@ -306,11 +315,91 @@ for _ = 1:10_000
 end
 
 
+# create a bunch of LLA points for testing
+function LLATestVec(n::Int=1_000_000)
+
+	# get the cnrs (in LLA)
+	bounds = Geodesy.Bounds{LLA_WGS84}(144.0, 150.0, -80.0, 0.0)  # utm zone 55
+	dlon = bounds.max_x - bounds.min_x
+	dlat = bounds.max_y - bounds.min_y
+
+	lla_vec = Vector{LLA{WGS84}}(n)
+	for i = 1:n
+		lla_vec[i] = LLA{WGS84}(bounds.min_x + rand() * dlon, bounds.min_y + rand() * dlat, (rand() - .5) * 18000)
+	end
+	return lla_vec
+
+end
 
 
+function benchmark()
+	
+	lla_vec = LLATestVec(50_000_000)  # random variations have been about ~100ms for this many points
+
+	# make proj4 do it for comparison (so there's no chance for type inference anywhere)
+	function P4_conv(lla_vec)
+		
+		mat = zeros(length(lla_vec), 3)
+		@inbounds for i = 1:length(lla_vec)
+			mat[i,1], mat[i,2], mat[i,3] = lla_vec[i][1], lla_vec[i][2], lla_vec[i][3]
+		end
+		Proj4.transform!(Geodesy.get_projection(LLA{WGS84}), Geodesy.get_projection(ECEF{WGS84}), mat)
+	
+		ecef_vec = Vector{ECEF{WGS84}}(length(lla_vec))
+		@inbounds for i = 1:length(lla_vec)
+			ecef_vec[i] = ECEF{WGS84}(mat[i,1], mat[i,2], mat[i,3])
+		end
+		return ecef_vec
+
+	end
+
+	# make the raw function do it (so there's no chance for type inference anywhere)
+	function raw_conv(lla_vec)
+		
+		d = Geodesy.ellipsoid(WGS84)
+
+		ecef_vec = Vector{ECEF{WGS84}}(length(lla_vec))
+		@inbounds for i = 1:length(lla_vec)
+
+			ϕdeg, λdeg, h = lla_vec[i].lat, lla_vec[i].lon, lla_vec[i].alt
+
+			sinϕ, cosϕ = sind(ϕdeg), cosd(ϕdeg)
+			sinλ, cosλ = sind(λdeg), cosd(λdeg)
+
+			N = d.a / sqrt(1 - d.e² * sinϕ^2)  # Radius of curvature (meters)
+
+			x = (N + h) * cosϕ * cosλ
+			y = (N + h) * cosϕ * sinλ
+			z = (N * (1 - d.e²) + h) * sinϕ
 
 
+			ecef_vec[i] = ECEF{WGS84}(x,y,z)
+		end
+		return ecef_vec
 
+	end
+
+
+	# compile stuff
+	raw_conv(lla_vec[1:1])
+	transform(ECEF, lla_vec[1:1])
+	transform(ECEF{WGS84}, lla_vec[1:1])
+	P4_conv(lla_vec[1:1])
+
+	# and test
+	println("Convert to ECEF with no type info in the transform")
+	@time raw_conv(lla_vec)
+
+	println("Convert to ECEF")
+	@time transform(ECEF, lla_vec)
+
+	println("Convert to ECEF{WGS84}")
+	@time transform(ECEF{WGS84}, lla_vec)
+	
+	println("Convert to ECEF{WGS84} via Proj4 (matrix style)")
+	@time P4_conv(lla_vec)
+
+end
 
 
 

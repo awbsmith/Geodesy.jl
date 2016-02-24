@@ -51,8 +51,7 @@ typealias LLA_NULL LLA{UnknownEllipse}
 """
 Cartesian cooridnates for a point on an ellipse
 
-Warning: This is a Cartesian system centered on the ellipse's center and with axis direction specified by the ellipse.  This is not necessarily a TRUE ECEF frame, which would be centered on the Earth's 
-         center of mass with axis direction given by the International Reference Pole (IRP) and International Reference Meridian
+Warning: This is a Cartesian system centered on the ellipse's center and with axis direction specified by the ellipse.  This is not necessarily a "proper" ECEF frame, which would be centered on the Earth's center of mass with axis direction given by the International Reference Pole (IRP) and International Reference Meridian
 
 		 Example:
          the "eAiry" ellipse's center is not the Earth's center of mass, so converting from an eAiry based datum LLA{OSGB36} to ECEF{OSGB36} will not give a true ECEF position.  Use the SRID
@@ -72,21 +71,28 @@ typealias ECEF_WGS84 ECEF{WGS84}
 typealias ECEF_NULL ECEF{UnknownEllipse}
 
 
-### SRID based points (converions will use Proj4)
-### N.B, for lat lon style SRIDs,  x -> lon, y -> lat (or getlat() and getlon())
-### N.B, for utm style SRIDs,  x -> east, y -> north, z -> up (or geteast() getnorth() getup())
-immutable SRID_Pos{T <: SRID} <: WorldPosition
+"""
+Points with a full coordinate reference system as defined by an SRID identifier (converions will use Proj4)
+
+Its up to the user to determine the what the x / y / z fields actually represent; which is governed by the element order in Proj4
+
+For a quick reference:
+	lat long style CRS's,  x -> lon, y -> lat (or getlat() and getlon())
+    utm style CRS's,  x -> false east, y -> false north, z -> up (or geteast() getnorth() getup())
+"""
+immutable CRS{T <: SRID} <: WorldPosition
    	x::Float64
     y::Float64
 	z::Float64
 end
 
+
 # Don't allow unkown SRIDS
-Base.call(::Type{SRID_Pos}, x::Real, y::Real, z::Real) = error("Must specify an SRID")
+Base.call(::Type{CRS}, x::Real, y::Real, z::Real) = error("Must specify an SRID")
 
 # convenience for getting the srid from an SRID point
-SRID{T}(X::SRID_Pos{T}) = T
-SRID{T}(::Type{SRID_Pos{T}}) = T
+SRID{T}(X::CRS{T}) = T
+SRID{T}(::Type{CRS{T}}) = T
 
 
 
@@ -140,10 +146,13 @@ end
 """
 Abstract type for compound coordinate reference system (i.e. height is not ellipsoidal)
 """
-abstract CCRS_Pos{T, U} <: WorldPosition
+abstract AbstractCCRS{T, U} <: WorldPosition
 
 # use the SRID style because we need to Proj4 to handle the Geoid anyway
-immutable Geoidal_SRID{T <: SRID, U <: AbstractGeoid} <: CCRS_Pos{T, U}
+"""
+Compound coordinate reference system where the height is geoidal
+"""
+immutable CCRS_Geoid{T <: SRID, U <: AbstractGeoid} <: AbstractCCRS{T, U}
 	x::Float64
 	y::Float64
 	z::Float64
@@ -157,7 +166,7 @@ end
 
 # adding a layer of abstraction here to allow for ENU points with no LLA reference included in their template
 """
-Unknown reference
+Unknown reference (allow for ENU points with no LLA reference included in their template)
 """
 immutable UnknownRef <: WorldPosition end  # when we don't want to embed the reference frame in out Local coordinates
 show(io::IO, ::Type{UnknownRef}) = print(io, "???")
@@ -171,7 +180,7 @@ East North Up point.  East and North lie in the reference ellipse's tangent plan
 
 Use ENU_NULL(e,n,u) if you don't want to encode the reference point in the type
 """
-immutable ENU{T} <: LocalPosition   # T should be either UnknownRef or a LLA position
+immutable ENU{T} <: LocalPosition   # T should be either UnknownRef or an LL position
     east::Float64
     north::Float64
     up::Float64

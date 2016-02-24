@@ -19,14 +19,16 @@ raw_data = [
 # build an srid type from the info in the raw data
 auth = symbol(raw_data[1, end-1])
 code = raw_data[1, end]
-srid = SRID{auth, code}  
+srid = SRID{auth, code}
+typealias Utm55S SRID_Pos{srid}  # use a type alias if it suits
 
 
 
 # create a vector of the points in this SRID
 # Transformations for the SRID_Pos type are handled by Proj4 package so anything supported by Proj4 is fine, BUT
 # its up to the user to correctly interpret the x,y,z fields of the SRID_Pos type as they could mean anything (lon lat ... / east north ... / x y ... etc)
-Xin = SRID_Pos{srid}(raw_data[:, 1:3], Val{:row})
+
+Xin = convert(Vector{Utm55S}, raw_data[:, 1:3]; row=true) # = convert(Vector{SRID_Pos{srid}}, raw_data[:, 1:3]; row=true)
 
 
 
@@ -101,21 +103,22 @@ srid_out = Geodesy.utm_srid(lla_ref)     # Geodesy can only do this for the WGS8
 
 # whether ECEF is truly an ECEF point depends on the datum
 # e.g.: 
-lla_odgb36 = LLA{Geodesy.OSGB36}(0, 0, 0)  		# OSGB36 is a good match to the geoid in the UK but not elsewhere
-ecef_fake = transform(ECEF, lla_odgb36) 		# = 6.377563396e6, 0.0, 0.0
+lla_osgb36 = LLA{Geodesy.OSGB36}(0, 0, 0)  		# OSGB36 is a good match to the geoid in the UK but not elsewhere
+ecef_fake = transform(ECEF, lla_osgb36) 		# = 6.377563396e6, 0.0, 0.0
 # isn't a true ECEF point because the OSGB36 ellipsoid isn't geocentric.
 
+
 # If in doubt, datum conversions can be using the SRID_Pos type to get Proj4 to do it, e.g. 
-ecef_srid = transform(SRID(ECEF{WGS84}), lla_odgb36) 	# = 6.377879171552554e6,-99.12039106890559, 534.423089412207
+ecef_srid = transform(SRID(ECEF{WGS84}), lla_osgb36) 	# = 6.377879171552554e6,-99.12039106890559, 534.423089412207
 ecef_wgs84 = convert(ECEF{WGS84}, ecef_srid)         	# convert to a type native to this package (type conversion not a transformation)
 
 # or equivilently
 srid = SRID(lla_odgb36)
-lla_srid = convert(SRID_Pos{srid}, lla_odgb36)       	# type conversion not a transformation
+lla_srid = convert(SRID_Pos{srid}, lla_osgb36)       	# type conversion not a transformation
 ecef_wgs84_2 = transform(ECEF{WGS84}, lla_srid)			# = 6.377879171552554e6,-99.12039106890559, 534.423089412207
 		
 
-
+# transform(WGS84, 
 
 
 
