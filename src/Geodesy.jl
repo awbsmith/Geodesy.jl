@@ -42,7 +42,10 @@ export
     # Methods
     center,
     distance,
-    
+
+	# convert to / from geodesy types
+	geodify,
+	ungeodify,
 
 	# accessors
 	getX,
@@ -66,7 +69,7 @@ export
     =#
 
 
-for f in ["datums", "ellipsoids", "srids", "geodesy_types", "known_srids", "utm", "point_methods", "transform", "bounds", "vicenty", "distance"]
+for f in ["datums", "ellipsoids", "srids", "geodesy_types", "known_srids", "utm", "point_methods", "transform", "bounds", "vicenty", "distance", "external"]
     include("$f.jl")
 end
 

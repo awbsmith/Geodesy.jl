@@ -91,6 +91,57 @@ utm = CRS{srid}(573105.43200000003, 086900.3839999996, 277.42700000000002) 		# a
 lla_wgs84 = transform(LLA{WGS84}, utm)  # the SRID corresponding to LLA{WGS84} is known to Geodesy (see known_srids.jl).  Otherwise, 
 lla_wgs84 = convert(LLA{WGS84}, transform(SRID{:EPSG, 4326}, utm))  # EPSG4326 is SRID for for the WGS84 LLA coordinate reference system
 
+
+
+##### Perform transforms on custom point types
+
+```julia
+
+	import Geodesy: geodify, ungeodify
+
+	# define a custom type
+	immutable CustomLLA
+		time::DateTime
+		txt::ASCIIString
+		lon::Float64
+		lat::Float64
+		alt::Float64
+	end
+
+	# define its conversion to a geodesy type
+	geodify(X::CustomLLA) = LLA{WGS84}(X.lon, X.lat, X.alt)
+
+	# instantiate it
+	custom_lla = CustomLLA(now(), "test input", .1167, 51.5, 0.0)
+	geodify(custom_lla) # = Geodesy.LLA{WGS84}(0.1167,51.5,0.0)
+
+	# and transform
+	ecef = transform(ECEF, custom_lla) # = ECEF{WGS84}(3.9786402778542214e6,8103.702688750244,4.968362457291028e6)
+
+	# make the output a custom type as well
+	immutable CustomECEF
+		time::DateTime
+		txt::ASCIIString
+		x::Float64
+		y::Float64
+		z::Float64
+	end
+
+	# define a conversion from the geodesy object 
+	# Notes: must include a 2nd argument that will match the input to the tranform
+    #        must supply parameters that allow the transform function to differentiate, e.g. an output type
+	ungeodify(ecef::ECEF, X::CustomLLA, ::Type{CustomECEF}) = CustomECEF(X.time, X.txt, ecef[1], ecef[2], ecef[3])
+
+	# and transform
+	custom_ecef = transform(ECEF, custom_lla, CustomECEF) # = CustomECEF(2016-02-25T16:13:59,"test input",3.9786402778542214e6,8103.702688750244,4.968362457291028e6)
+
+	# be a little more fancy
+	ungeodify(ecef::ECEF, X::CustomLLA, t::DateTime, str::ASCIIString) = CustomECEF(t, str, ecef[1], ecef[2], ecef[3])
+
+	# and transform
+	custom_ecef = transform(ECEF, custom_lla, now(), "test output") # = CustomECEF(2016-02-25T16:05:32,"test output",3.9786402778542214e6,8103.702688750244,4.968362457291028e6)
+
+
 ```
 
 
@@ -117,23 +168,26 @@ lla = LLA{VN2000}(0, 0, 0.0)
 # and convert to "ECEF" (actually just a Cartesian xyz representation)
 cart = transform(ECEF{VN2000}, lla) # = ECEF{VN2000}(6.378137e6,0.0,0.0)
 
-# now compare to performing the transform with full datum knownledge (remembering VN2000 uses the WGS84 ellipsoid)
+# now compare that to performing the transform with full datum knownledge 
 lla_crs = convert(CRS{vn2000}, lla)
 ecef = transform(ECEF{WGS84}, lla_crs) # = ECEF{WGS84}(6.377944246908978e6,-39.27841102745324,-111.1865389593214)
 
 # cast to Vectors to prevent errors
 dist = norm(Vector(cart) - Vector(ecef)) # = 225.96
 
-
 ```
-
-
-
-
-
-
-
+How did that happen?  We can check the Proj4 well known text for the VN2000 datum
+```Julia
+Geodesy.proj4_str(vn2000) = "+proj=longlat +ellps=WGS84 +towgs84=-192.873,-39.382,-111.202,-0.00205,-0.0005,0.00335,0.0188 +no_defs"
 ```
+which shows it does use the WGS84 ellipse, however there is a translation and rotation to align the VN2000 datum to the WGS84 datum defined by the *+to_wgs84* parameters
+
+
+
+
+
+
+
 
 
 

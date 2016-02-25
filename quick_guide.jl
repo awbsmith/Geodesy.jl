@@ -20,7 +20,7 @@ raw_data = [
 auth = symbol(raw_data[1, end-1])
 code = raw_data[1, end]
 srid = SRID{auth, code}
-typealias Utm55S SRID_Pos{srid}  # use a type alias if it suits
+typealias Utm55S CRS{srid}  # use a type alias if it suits
 
 
 
