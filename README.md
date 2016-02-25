@@ -23,7 +23,7 @@ The below type is parameterised by a [spatial reference ID (SRID)](https://en.wi
 
 The below types are parameterised by a reference datum. Note that the coordinate system types only understands the datum's ellipse; however using a datum type as a parameter is a convenient way to get the reference ellipse while also stopping the user from directly comparing points from different datums that use the same ellipse.
 
-Datums for common ellipse's are provided, and custom ellipse's can also be used. For a list of all predefined datums, use `Geodesy.get_datums()`
+Some common ellipses and datums are provided, and custom ellipse's can also be used. For a list of all predefined datums, use `Geodesy.get_datums()`
 
 1. `LLA`   - Longitude latitude height coordinate
 
@@ -91,7 +91,7 @@ utm = CRS{srid}(573105.43200000003, 086900.3839999996, 277.42700000000002) 		# a
 lla_wgs84 = transform(LLA{WGS84}, utm)  # the SRID corresponding to LLA{WGS84} is known to Geodesy (see known_srids.jl).  Otherwise, 
 lla_wgs84 = convert(LLA{WGS84}, transform(SRID{:EPSG, 4326}, utm))  # EPSG4326 is SRID for for the WGS84 LLA coordinate reference system
 
-
+```
 
 ##### Perform transforms on custom point types
 
@@ -145,9 +145,9 @@ lla_wgs84 = convert(LLA{WGS84}, transform(SRID{:EPSG, 4326}, utm))  # EPSG4326 i
 ```
 
 
-#### A note Datums vs Ellipsoids and the ECEF type
+#### A Note on Datums vs Ellipsoids and the ECEF type
 
-An ECEF coordinate system's origin should be the Earth's center of mass and have axes aligned with the International Reference Pole (IRP) and International Reference Meridian ([ECEF((https://en.wikipedia.org/wiki/ECEF)))].  Since the coordinate system types only use the ellipse part of the datum, they have no information to align the datums axis to the International Reference Meridian etc. 
+An ECEF coordinate system's origin should be the Earth's center of mass and have axes aligned with the International Reference Pole and International Reference Meridian ([ECEF](https://en.wikipedia.org/wiki/ECEF)].  Since the coordinate system types only use the ellipse part of the datum, they have no information to align the datums axis to the International Reference Meridian etc. 
 
 As a result the ECEF point type used in this package is simply a Cartesian coordinate system with an origin set to the parameterising ellipse's center, with axes specified by the ellipse which could point anywhere on the Earth's surface.  As an example: 
 
@@ -176,7 +176,7 @@ ecef = transform(ECEF{WGS84}, lla_crs) # = ECEF{WGS84}(6.377944246908978e6,-39.2
 dist = norm(Vector(cart) - Vector(ecef)) # = 225.96
 
 ```
-How did that happen?  We can check the Proj4 well known text for the VN2000 datum
+We can check the Proj4 well known text for the VN2000 datum
 ```Julia
 Geodesy.proj4_str(vn2000) = "+proj=longlat +ellps=WGS84 +towgs84=-192.873,-39.382,-111.202,-0.00205,-0.0005,0.00335,0.0188 +no_defs"
 ```
