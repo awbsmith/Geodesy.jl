@@ -41,9 +41,9 @@ end
 
 
 
-##############################
+###############################
 ### LLA to ECEF coordinates ###
-##############################
+###############################
 
 
 function lla_to_ecef{T <: ECEF, U <: LL_fam}(::Type{T}, ll::U, d::Ellipsoid)
@@ -62,23 +62,23 @@ function lla_to_ecef{T <: ECEF, U <: LL_fam}(::Type{T}, ll::U, d::Ellipsoid)
 end
 
 # dont allow datum / ellipse transforms within Geodesy
-transform{T <: KnownEllipse, U <: KnownEllipse}(::Type{ECEF{T}}, lla::Union{LLA{U}, LL{U}}) = error("Ellipse / datum transforms should be be done explicitly via CRS point types\nIf you're sure what you're doing is correct you can transform the input position to type LLA_NULL")
+transform{T <: KnownDatum, U <: KnownDatum}(::Type{ECEF{T}}, lla::Union{LLA{U}, LL{U}}) = error("Ellipse / datum transforms should be be done explicitly via CRS point types\nIf you're sure what you're doing is correct you can transform the input position to type LLA_NULL")
 
 # must specify the ellipse somewhere
-transform{T <: UnknownEllipse}(::Type{ECEF{T}}, lla::Union{LLA{T}, LL{T}}) = error("An ellipse must be specified in either the input or the output types")
+transform{T <: UnknownDatum}(::Type{ECEF{T}}, lla::Union{LLA{T}, LL{T}}) = error("An ellipse must be specified in either the input or the output types")
 
 # other combos
-transform{T <: KnownEllipse}(::Type{ECEF{T}}, lla::Union{LLA{T}, LL{T}}) =  lla_to_ecef(ECEF{T}, lla, ellipsoid(T))
-transform{T <: KnownEllipse}(::Type{ECEF_NULL}, lla::Union{LLA{T}, LL{T}}) = lla_to_ecef(ECEF_NULL, lla, ellipsoid(T))
-transform{T <: KnownEllipse}(::Type{ECEF{T}}, lla::LLA_NULL) = lla_to_ecef(ECEF{T}, lla, ellipsoid(T))
-transform{T <: KnownEllipse}(::Type{ECEF}, lla::Union{LLA{T}, LL{T}}) = lla_to_ecef(ECEF{T}, lla, ellipsoid(T))
+transform{T <: KnownDatum}(::Type{ECEF{T}}, lla::Union{LLA{T}, LL{T}}) =  lla_to_ecef(ECEF{T}, lla, ellipsoid(T))
+transform{T <: KnownDatum}(::Type{ECEF_NULL}, lla::Union{LLA{T}, LL{T}}) = lla_to_ecef(ECEF_NULL, lla, ellipsoid(T))
+transform{T <: KnownDatum}(::Type{ECEF{T}}, lla::LLA_NULL) = lla_to_ecef(ECEF{T}, lla, ellipsoid(T))
+transform{T <: KnownDatum}(::Type{ECEF}, lla::Union{LLA{T}, LL{T}}) = lla_to_ecef(ECEF{T}, lla, ellipsoid(T))
 
 
 ###############################
 ### ECEF to LLA coordinates ###
 ###############################
 
-function ecef_to_lla{T <: LLA, U <: AbstractEllipse}(::Type{T}, ecef::ECEF{U}, d::Ellipsoid)
+function ecef_to_lla{T <: LLA, U <: AbstractDatum}(::Type{T}, ecef::ECEF{U}, d::Ellipsoid)
     x, y, z = ecef.x, ecef.y, ecef.z
 
     p = hypot(x, y)
@@ -95,20 +95,20 @@ function ecef_to_lla{T <: LLA, U <: AbstractEllipse}(::Type{T}, ecef::ECEF{U}, d
 end
 
 # dont allow datum / ellipse transforms
-transform{T <: KnownEllipse, U <: KnownEllipse}(::Type{LLA{T}}, ecef::ECEF{U}) = error("Ellipse / datum transforms should be be done explicitly via CRS point types\nIf you're sure what you're doing is correct you can transform the input position to type ECEF_NULL")
+transform{T <: KnownDatum, U <: KnownDatum}(::Type{LLA{T}}, ecef::ECEF{U}) = error("Ellipse / datum transforms should be be done explicitly via CRS point types\nIf you're sure what you're doing is correct you can transform the input position to type ECEF_NULL")
 
 # must specify the ellipse somewhere
-transform{T <: UnknownEllipse}(::Type{LLA{T}}, ecef::ECEF{T}) = error("An ellipse must be specified in either the input or the output types")
+transform{T <: UnknownDatum}(::Type{LLA{T}}, ecef::ECEF{T}) = error("An ellipse must be specified in either the input or the output types")
 
 # other combos
-transform{T <: KnownEllipse}(::Type{LLA{T}}, ecef::ECEF{T}) = ecef_to_lla(LLA{T}, ecef, ellipsoid(T))
-transform{T <: KnownEllipse}(::Type{LLA_NULL}, ecef::ECEF{T}) = ecef_to_lla(LLA_NULL, ecef, ellipsoid(T))
-transform{T <: KnownEllipse}(::Type{LLA{T}}, ecef::ECEF_NULL) = ecef_to_lla(LLA{T}, ecef, ellipsoid(T))
-transform{T <: KnownEllipse}(::Type{LLA}, ecef::ECEF{T}) = ecef_to_lla(LLA{T}, ecef, ellipsoid(T))
+transform{T <: KnownDatum}(::Type{LLA{T}}, ecef::ECEF{T}) = ecef_to_lla(LLA{T}, ecef, ellipsoid(T))
+transform{T <: KnownDatum}(::Type{LLA_NULL}, ecef::ECEF{T}) = ecef_to_lla(LLA_NULL, ecef, ellipsoid(T))
+transform{T <: KnownDatum}(::Type{LLA{T}}, ecef::ECEF_NULL) = ecef_to_lla(LLA{T}, ecef, ellipsoid(T))
+transform{T <: KnownDatum}(::Type{LLA}, ecef::ECEF{T}) = ecef_to_lla(LLA{T}, ecef, ellipsoid(T))
 
 # Should this exist?
-transform{T <: AbstractEllipse}(::Type{LL{T}}, ecef::ECEF) = transform(LL{T}, ecef_to_lla(LLA{T}, ecef, ellipsoid(T)))
-transform{T <: AbstractEllipse}(::Type{LL}, ecef::ECEF{T}) = transform(LL{T}, ecef_to_lla(LLA{T}, ecef, ellipsoid(T)))
+transform{T <: AbstractDatum}(::Type{LL{T}}, ecef::ECEF) = transform(LL{T}, ecef_to_lla(LLA{T}, ecef, ellipsoid(T)))
+transform{T <: AbstractDatum}(::Type{LL}, ecef::ECEF{T}) = transform(LL{T}, ecef_to_lla(LLA{T}, ecef, ellipsoid(T)))
 
 
 
@@ -345,8 +345,8 @@ transform{T}(::Type{LLA{T}}, enu::ENU, ll_ref::Union{LLA{T}, LL{T}}) = transform
 
 
 # Should this exist?
-transform{T <: AbstractEllipse}(::Type{LL{T}}, enu::ENU, ll_ref::Union{LLA{T}, LL{T}}) = transform(LL{T}, enu_to_ecef(ECEF{T}, enu, ll_ref))
-transform{T <: AbstractEllipse}(::Type{LL}, enu::ENU, ll_ref::Union{LLA{T}, LL{T}}) = transform(LL{T}, enu_to_ecef(ECEF{T}, enu, ll_ref))
+transform{T <: AbstractDatum}(::Type{LL{T}}, enu::ENU, ll_ref::Union{LLA{T}, LL{T}}) = transform(LL{T}, enu_to_ecef(ECEF{T}, enu, ll_ref))
+transform{T <: AbstractDatum}(::Type{LL}, enu::ENU, ll_ref::Union{LLA{T}, LL{T}}) = transform(LL{T}, enu_to_ecef(ECEF{T}, enu, ll_ref))
 
 
 

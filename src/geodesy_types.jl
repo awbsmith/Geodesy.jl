@@ -34,7 +34,7 @@ Point in Longitude-Latitude-Altitude (LLA) coordinates defined for the specified
 
 Use LLA_NULL(lon, lat, alt) if you don't want to encode the reference ellipse in the type
 """
-immutable LLA{T <: AbstractEllipse} <: WorldPosition
+immutable LLA{T <: AbstractDatum} <: WorldPosition
 	lon::Float64    
 	lat::Float64
     alt::Float64
@@ -42,7 +42,7 @@ end
 
 # useful shortcuts
 typealias LLA_WGS84 LLA{WGS84}
-typealias LLA_NULL LLA{UnknownEllipse}
+typealias LLA_NULL LLA{UnknownDatum}
 
 
 
@@ -60,7 +60,7 @@ Warning: This is a Cartesian system centered on the ellipse's center and with ax
 
 Use ECEF_NULL(lon, lat, alt) if you don't want to encode the reference ellipse in the type
 """
-immutable ECEF{T <: AbstractEllipse} <: WorldPosition
+immutable ECEF{T <: AbstractDatum} <: WorldPosition
     x::Float64
     y::Float64
     z::Float64
@@ -68,7 +68,7 @@ end
 
 # useful shortcuts
 typealias ECEF_WGS84 ECEF{WGS84}
-typealias ECEF_NULL ECEF{UnknownEllipse}
+typealias ECEF_NULL ECEF{UnknownDatum}
 
 
 """
@@ -108,7 +108,7 @@ SRID{T}(::Type{CRS{T}}) = T
 """
 Point in Longitude-Latitude (LL) coordinates defined for the specified ellipse.  Assume the height above the ellipsoid is 0
 """
-immutable LL{T <: AbstractEllipse} <: WorldSurfacePosition
+immutable LL{T <: AbstractDatum} <: WorldSurfacePosition
 	lon::Float64  # proj 4 is lon lat    
 	lat::Float64
 	LL(x::Real, y::Real) = new(x, y)  # need to specify a constructor to stop the default constructor overwriting the FixedVectorNoTuple{2, Float64} constructors
@@ -117,7 +117,7 @@ end
 
 # useful shortcuts
 typealias LL_WGS84 LL{WGS84}
-typealias LL_NULL LL{UnknownEllipse}
+typealias LL_NULL LL{UnknownDatum}
 
 
 
@@ -208,7 +208,7 @@ add_param{T}(::Type{ENU{T}}) = ENU{T}
 
 
 # retrieve datums and ellipsoids
-ellipsoid{T <: AbstractEllipse}(::Union{LLA{T}, LL{T}, ECEF{T}}) = ellipsoid(T)           # reference ellipsoid for the position
+ellipsoid{T <: AbstractDatum}(::Union{LLA{T}, LL{T}, ECEF{T}}) = ellipsoid(T)           # reference ellipsoid for the position
 
 
 

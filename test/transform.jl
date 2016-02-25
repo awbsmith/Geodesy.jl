@@ -230,7 +230,7 @@ for _ = 1:10_000
     x, y, z = randLLA()
 
 	# TODO: figure out how to make this list and draw randomly from it
-	# ellipse = [subtypes(PsuedoDatum{T}); subtypes(PsuedoDynDatum{T})]
+	# ellipse = Geodesy.get_datums()
 
 	# get LLA and LL types
     lla = LLA{WGS84}(x, y, z)

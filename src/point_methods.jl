@@ -5,66 +5,22 @@
 # while the "convert" function converts types leaving values unchanged
 ###########################################
 
+# TODO: This whole thing should probably be switched to a codegen format
+
 # Convenient union types 
 Geodesy_fam = Union{WorldPosition, WorldSurfacePosition, LocalPosition}  # try to ctach everything
 World_fam = Union{WorldPosition, WorldSurfacePosition}
 Local_fam = Union{LocalPosition}
 LL_fam = Union{LLA, LL}
 
-#=
 
-immutable World; end
-immutable Local; end
-immutable LatLon; end
-
-# Coordinate family trait
-coordinate_family{Datum}(::Type{ECEF{Datum}}) = World
-coordinate_family(::Type{LLA}) = LatLon
-
-# Datum trait ????
-datum{Datum}(::Type{ECEF{Datum}}) = Datum
-datum{Datum}(::Type{LLA{Datum}}) = Datum
-datum{Datum}(::Type{ENU{Datum}}) = Datum
-
-function transform(out_type, p1)
-    transform(out_type, coordinate_family(p1), p1)
-end
-
-function transform(::Type{ECEF}, ::Type{World}, p)
-    
-end
-
-
-immutable SomeoneElsesFancyPoint
-    x::Float64
-    y::Float64
-    z::Float64
-    capture_time::Float64
-    red::Float64
-    green::Float64
-    blue::Float64
-end
-
-
-# Now make SomeoneElsesFancyPoint work with Geodesy without needing to change the type
-# by defining the following trait
-coordinate_family(::Type{SomeoneElsesFancyPoint}) = World
-datum(::Type{SomeoneElsesFancyPoint}) = 
-
-
-p1 = SomeoneElsesFancyPoint(1,2,3,0,2,3)
-
-transform(ECEF
-
-=#
-
-Proj4_fam = Union{WorldPosition, CRS}          # acceptable types to give to Proj4
+Proj4_fam = Union{WorldPosition, CRS}           # acceptable types to give to Proj4
 
 Vec3_fam = Union{WorldPosition, LocalPosition}  # for three element point types
-Vec2_fam = Union{LL}  # for three element point types
+Vec2_fam = Union{LL}  							# for three element point types
 
-ELL_param_fam = Union{LLA, LL, ECEF}  # things where an ellipse / psuedo datum are the template param
-LL_param_fam = Union{ENU}            # things where an LLA points is the template param
+ELL_param_fam = Union{LLA, LL, ECEF}  			# things where an ellipse / psuedo datum are the template param
+LL_param_fam = Union{ENU}            			# things where an LLA points is the template param
 
 
 #########################################
@@ -96,8 +52,8 @@ get_up{T <: Vec3_fam}(X::T) = X[3]
 
 #TODO: Should these be promote rules?
 
-#add_param{T <: ELL_param_fam}(::Type{T}) = typeof(T.parameters[1]) == DataType ? T : T{UnknownEllipse}  # not type safe :-(
-@generated add_param{T <: ELL_param_fam}(::Type{T}) = (typeof(T.parameters[1]) == DataType) ? :(T) :  :(T{UnknownEllipse})
+#add_param{T <: ELL_param_fam}(::Type{T}) = typeof(T.parameters[1]) == DataType ? T : T{UnknownDatum}  # not type safe :-(
+@generated add_param{T <: ELL_param_fam}(::Type{T}) = (typeof(T.parameters[1]) == DataType) ? :(T) :  :(T{UnknownDatum})
 
 #add_param{T <: LL_param_fam}(::Type{T}) = typeof(T.parameters[1]) == DataType ? T : T{UnknownRef}      # not type safe :-(
 @generated add_param{T <: LL_param_fam}(::Type{T}) = (typeof(T.parameters[1]) == DataType) ? :(T) :  :(T{UnknownRef})
@@ -105,7 +61,7 @@ get_up{T <: Vec3_fam}(X::T) = X[3]
 add_param{T <: CRS}(::Type{T}) = typeof(T.parameters[1]) == DataType ? T : error("always specify an SRID when using the CRS type")
 
 # retrieve datums and ellipsoids
-ellipsoid{T <: ELL_param_fam}(::Type{T}) = ellipsoid(T.parameters[1])           # reference ellipsoid for the position
+@generated ellipsoid{T <: ELL_param_fam}(::Type{T}) = :($(ellipsoid(T.parameters[1])))           # reference ellipsoid for the position
 
 # methods to pull the reference point from the template
 @generated ELL_type{T <: ELL_param_fam}(::Type{T}) = :($(T.parameters[1]))
@@ -179,9 +135,9 @@ macro default_convs(type_name, known_subtype, null_subtype)
 end
 
 # generate default conversions for everything
-@default_convs(LLA, KnownEllipse, UnknownEllipse)
-@default_convs(LL, KnownEllipse, UnknownEllipse)
-@default_convs(ECEF, KnownEllipse, UnknownEllipse)
+@default_convs(LLA, KnownDatum, UnknownDatum)
+@default_convs(LL, KnownDatum, UnknownDatum)
+@default_convs(ECEF, KnownDatum, UnknownDatum)
 @default_convs(ENU, LLA, UnknownRef)
 
 # dont macro srid type's, we don't want to allow stripping of the SRID 

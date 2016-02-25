@@ -4,19 +4,18 @@ abstract AbstractSRID
 # SRID as a type (so we can multiple disbatch based on it)
 # auth is a symbol, code is an integer
 immutable SRID{auth, code} <: AbstractSRID end  # good to have it as a subtype of datum? 
-
 show{auth, code}(io::IO, ::Type{SRID{auth, code}}) = print(io, "$(auth)$(code)")
 
 #=
-# untyped style in case someone need to use a Julia type system killing quantity of SRIDs in a single session
-immutable SRID_Data <: AbstractSRID
+# Ideally an SRID would be this but the below can't be use as a parameter of another type for for reasons, while a (Symbol, Int) tupple can zzz
+immutable SRID <: AbstractSRID
 	auth::Symbol
 	code::Int
 end
 =#
 
 
-# get the Proj4 string for an SRID
+# get the Proj4 string for a given SRID
 function proj4_str{auth, code}(::Type{SRID{auth, code}})
 
 	dict_sym = symbol(lowercase(string(auth)))

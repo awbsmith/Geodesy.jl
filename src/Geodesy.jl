@@ -66,7 +66,7 @@ export
     =#
 
 
-for f in ["srids", "ellipsoids", "geodesy_types", "known_srids", "utm", "point_methods", "transform", "bounds", "vicenty", "distance"]
+for f in ["datums", "ellipsoids", "srids", "geodesy_types", "known_srids", "utm", "point_methods", "transform", "bounds", "vicenty", "distance"]
     include("$f.jl")
 end
 
