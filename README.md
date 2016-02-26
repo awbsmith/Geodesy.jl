@@ -10,7 +10,7 @@ Geodesy is designed to work with world locations various coordinate systems.
 
 The above image gives a quick picture of the components of the coordinate reference systems used in geodesy.  This Geodesy package is intended for use with the "Coordinate System" subtypes, however the [Proj4 package](https://github.com/FugroRoames/Proj4.jl) is used as a backend to allow transforming to / from / between "Coordinate _Reference_ Systems". 
 
-Roadmap note: Its intended to define the coordinate reference system types in backend packages (Proj4 etc), with the Geodesy package provided common interface methods for them (functions to overload etc).  This change would mean Proj4 depends on Geodesy instead of Geodesy depending on Proj4.
+
 
 ### "Coordinate Reference System" Types
 
@@ -18,10 +18,12 @@ The below type is parameterised by a [spatial reference ID (SRID)](https://en.wi
 
 1. `CRS` - The coordinate _reference_ system point type.  This type should be used for operations that require knowledge of the datum, e.g. swapping between datums. Transformations involving this type are perfromed by Proj4 as a full understanding of coordinate reference systems is beyond the scope of this package. It's left to the user to correctly interpret the fields of this type as different SRIDs use different coordinate systems ([lat, long, height] / [x, y, z] / [false east, false north, height] / etc).
 
+**Roadmap note**: It'd be nice to migrate the coordinate reference system types in backend packages (Proj4 etc), with the Geodesy package providing common interface methods for them (functions to overload etc).  This change would mean Proj4 depends on Geodesy instead of Geodesy depending on Proj4.
+
 
 ### "Coordinate System" Types
 
-The below types are parameterised by a reference datum. Note that the coordinate system types only understands the datum's ellipse; however using a datum type as a parameter is a convenient way to get the reference ellipse while also stopping direct comparison of points from different datums that may use the same ellipse.  A discussion on datums vs ellipses is given later in this readme.
+The below types are parameterised by a reference datum. Note that the coordinate system types only "understand" the datum's ellipse; however using a datum type as a parameter is a convenient way to get the reference ellipse while also stopping direct comparison of points from different datums (that may use the same ellipse).  A discussion on datums vs ellipses is given later in this readme.
 
 Some common ellipses and datums are provided, and custom ellipse's can also be used. For a list of all predefined datums, use `Geodesy.get_datums()`
 
@@ -29,7 +31,7 @@ Some common ellipses and datums are provided, and custom ellipse's can also be u
 
 2. `LL`    - Longitude latitude point coordinate to be on the ellipse's surface
 
-3. `ECEF`  - X Y Z coordinate.  Note that ECEF has a [meaning beyong a Cartesian coordinate system](https://en.wikipedia.org/wiki/ECEF), however it is used in this package to mean only a Cartesian coordinate system with origin equal to the ellipse's center.  This is a consequence of this package only using the ellipse part of the datum.  An example of this is given below.
+3. `ECEF`  - Cartesian coordinate.  Note that ECEF has a [meaning beyong a Cartesian coordinate system](https://en.wikipedia.org/wiki/ECEF), however it is used in this package to mean only a Cartesian coordinate system with origin equal to the ellipse's center.  This is a consequence of this package only using the ellipse part of the datum.  
 
 
 The below type is parameterized by an `LL` point which determines the origin and axis directions of the local coordinate system.  The `LL` parameter can be omitted from the template and passed to function seperately if desired.
@@ -142,7 +144,7 @@ lla_wgs84 = convert(LLA{WGS84}, geotransform(SRID{:EPSG, 4326}, utm))  # EPSG432
 
 #### A note on datums vs ellipses
 
-Datums contain more information than just the reference ellipse.  Two different datums can use the same ellipse but have differenent centers (relative to a point on the Earth's surface, or have different reference poles / meridians.  Comparing points in the different datums also requires having a transforming to align them.  As an example,
+Datums contain more information than just the reference ellipse.  Two different datums can use the same ellipse but have a different origin and / or orientation relative to points on the Earth's surface.  Comparing points in the different datums requires knowing the transformation to align them.  As an example,
 
 
 ```julia
@@ -156,15 +158,14 @@ import Geodesy: ellipsoid
 ellipsoid(::Type{VN2000}) = ellipsoid(Geodesy.WGS84_ELLIPSE)  # overload the function to retrieve this datum's ellipsoid
 
 # define an LLA point in this datum
-lla_vn2000 = LLA{VN2000}(0, 0, 0)
-crs_vn2000 = convert(CRS{vn2000}, lla_vn2000)
+lla_vn2000 = CRS{vn2000}(0, 0, 0)
 
 # convert this point to the WGS84 datum
 lla_wgs84 = geotransform(LLA{WGS84}, crs_vn2000)   # = LLA{WGS84}(-0.0003528546332018209,-0.0010055677147903898,-192.75199438724667)
 
 ```
 
-We can check the Proj4 well known text for the VN2000 datum and see the *+towgs84* transformation parameters
+We can check the Proj4 well known text for the VN2000 datum to see the *+towgs84* transformation parameters
 
 ```Julia
 Geodesy.proj4_str(vn2000) # = "+proj=longlat +ellps=WGS84 +towgs84=-192.873,-39.382,-111.202,-0.00205,-0.0005,0.00335,0.0188 +no_defs"
@@ -173,15 +174,15 @@ Geodesy.proj4_str(vn2000) # = "+proj=longlat +ellps=WGS84 +towgs84=-192.873,-39.
 
 #### A note on the ECEF type
 
-An ECEF coordinate system's origin should be the Earth's center of mass and have axes aligned with the International Reference Pole and International Reference Meridian ([ECEF](https://en.wikipedia.org/wiki/ECEF)].  Since the coordinate system types only use the ellipse part of the datum, they have no information to align the datums axis to the International Reference Meridian etc. 
+An ECEF coordinate system's origin should be the Earth's center of mass and have axes aligned with the International Reference Pole and International Reference Meridian ([ECEF](https://en.wikipedia.org/wiki/ECEF)).  Since the coordinate system types only use the ellipse part of the datum, they have no information to align the datum's axes to the International Reference Meridian etc. 
 
 As a result the ECEF point type used in this package is simply a Cartesian coordinate system with an origin set to the parameterising ellipse's center, with axes specified by the ellipse which could point anywhere on the Earth's surface.  The tag ECEF is choosen for pragmatism.
 
 As an example:
 
 ```julia
-lla_osgb36 = LLA{Geodesy.OSGB36}(0, 0, 0)  		# OSGB36 is a good match to the Earth in the UK but not elsewhere, and is not centered on the Earth's center of mass (i.e. not a [geocentric datum](http://support.esri.com/en/knowledgebase/GISDictionary/term/geocentric%20datum))
-cart = geotransform(ECEF, lla_osgb36) 		            # = 6.377563396e6, 0.0, 0.0
+lla_osgb36 = LLA{Geodesy.OSGB36}(0, 0, 0)  				# OSGB36 is a good match to the Earth in the UK but not elsewhere, and is not centered on the Earth's center of mass (i.e. not a [geocentric datum](http://support.esri.com/en/knowledgebase/GISDictionary/term/geocentric%20datum))
+cart = geotransform(ECEF, lla_osgb36) 		    		# = 6.377563396e6, 0.0, 0.0
 
 # we can compare the above to the ECEF position using the WGS84 datum (a geocentric datum)
 ecef_crs = geotransform(SRID(ECEF{WGS84}), lla_osgb36) 	# = 6.377879171552554e6,-99.12039106890559, 534.423089412207
