@@ -21,7 +21,7 @@ The below type is parameterised by a [spatial reference ID (SRID)](https://en.wi
 
 ### "Coordinate System" Types
 
-The below types are parameterised by a reference datum. Note that the coordinate system types only understands the datum's ellipse; however using a datum type as a parameter is a convenient way to get the reference ellipse while also stopping the user from directly comparing points from different datums that use the same ellipse.  An illustration of datums vs ellipses is given later in this readme.
+The below types are parameterised by a reference datum. Note that the coordinate system types only understands the datum's ellipse; however using a datum type as a parameter is a convenient way to get the reference ellipse while also stopping direct comparison of points from different datums that may use the same ellipse.  A discussion on datums vs ellipses is given later in this readme.
 
 Some common ellipses and datums are provided, and custom ellipse's can also be used. For a list of all predefined datums, use `Geodesy.get_datums()`
 
@@ -45,9 +45,9 @@ The below type is parameterized by an `LL` point which determines the origin and
 	lla_wgs84_srid = SRID(LLA{WGS84})
 	convert(CRS{lla_wgs84_srid}, lla_wgs84) # = CRS{EPSG4326}(0.0,0.0,0.0)
 ```
-is appropriate as the point value remains the same.  `convert` will not change values!
+	convert` will not change values!
 
-1. `geotransform` is used for value modifying transformations, e.g.:
+2. `geotransform` is used for value modifying transformations, e.g.:
 ```julia
 	lla_wgs84 = LLA{WGS84}(0.0,0.0,0.0)
 	geotransform(ECEF, lla_wgs84) # = ECEF{WGS84}(6.378137e6,0.0,0.0)
@@ -88,8 +88,8 @@ srid = SRID{:EPSG, 32755}    													# WGS84 datum [UTM](https://en.wikiped
 utm = CRS{srid}(573105.43200000003, 086900.3839999996, 277.42700000000002) 		# a point in the above zone
 
 # convert to a coordinate sytem type
-lla_wgs84 = geotransform(LLA{WGS84}, utm)  # the SRID corresponding to LLA{WGS84} is known to Geodesy (see known_srids.jl).  Otherwise, 
-lla_wgs84 = convert(LLA{WGS84}, geotransform(SRID{:EPSG, 4326}, utm))  # EPSG4326 is SRID for for the WGS84 LLA coordinate reference system
+lla_wgs84 = geotransform(LLA{WGS84}, utm)  							   # the SRID corresponding to LLA{WGS84} is known to Geodesy (see known_srids.jl).  Otherwise, 
+lla_wgs84 = convert(LLA{WGS84}, geotransform(SRID{:EPSG, 4326}, utm))  # EPSG4326 is the SRID for for the WGS84 LLA coordinate reference system
 
 ```
 
@@ -140,9 +140,9 @@ lla_wgs84 = convert(LLA{WGS84}, geotransform(SRID{:EPSG, 4326}, utm))  # EPSG432
 ```
 
 
-#### A Note on Datums vs Ellipsoids
+#### A note on datums vs ellipses
 
-Datums contain more information than just the reference ellipse.  Two different datums can use the same ellipse but have differenent centers (relative to a point on the Earth's surface, or have different reference poles / meridians.  Comparing points in the different datums requires having a transforming to align the two ellipses.  As an example,
+Datums contain more information than just the reference ellipse.  Two different datums can use the same ellipse but have differenent centers (relative to a point on the Earth's surface, or have different reference poles / meridians.  Comparing points in the different datums also requires having a transforming to align them.  As an example,
 
 
 ```julia
@@ -171,7 +171,7 @@ Geodesy.proj4_str(vn2000) # = "+proj=longlat +ellps=WGS84 +towgs84=-192.873,-39.
 ```
 
 
-#### A Note on the ECEF type
+#### A note on the ECEF type
 
 An ECEF coordinate system's origin should be the Earth's center of mass and have axes aligned with the International Reference Pole and International Reference Meridian ([ECEF](https://en.wikipedia.org/wiki/ECEF)].  Since the coordinate system types only use the ellipse part of the datum, they have no information to align the datums axis to the International Reference Meridian etc. 
 
