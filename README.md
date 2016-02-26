@@ -10,7 +10,7 @@ Geodesy is designed to work with world locations various coordinate systems.
 
 The above image gives a quick picture of the components of the coordinate reference systems used in geodesy.  This Geodesy package is intended for use with the "Coordinate System" subtypes, however the [Proj4 package](https://github.com/FugroRoames/Proj4.jl) is used as a backend to allow transforming to / from / between "Coordinate _Reference_ Systems". 
 
-Roadmap note: Its intended to define coordinate reference system in the backend packages (Proj4 etc), with the Geodesy package provided interface methods for them (functions to overload etc).  This change would mean Proj4 depends on Geodesy instead of Geodesy depending on Proj4.
+Roadmap note: Its intended to define the coordinate reference system types in backend packages (Proj4 etc), with the Geodesy package provided common interface methods for them (functions to overload etc).  This change would mean Proj4 depends on Geodesy instead of Geodesy depending on Proj4.
 
 ### "Coordinate Reference System" Types
 
@@ -21,7 +21,7 @@ The below type is parameterised by a [spatial reference ID (SRID)](https://en.wi
 
 ### "Coordinate System" Types
 
-The below types are parameterised by a reference datum. Note that the coordinate system types only understands the datum's ellipse; however using a datum type as a parameter is a convenient way to get the reference ellipse while also stopping the user from directly comparing points from different datums that use the same ellipse.
+The below types are parameterised by a reference datum. Note that the coordinate system types only understands the datum's ellipse; however using a datum type as a parameter is a convenient way to get the reference ellipse while also stopping the user from directly comparing points from different datums that use the same ellipse.  An illustration of datums vs ellipses is given later in this readme.
 
 Some common ellipses and datums are provided, and custom ellipse's can also be used. For a list of all predefined datums, use `Geodesy.get_datums()`
 
@@ -43,14 +43,14 @@ The below type is parameterized by an `LL` point which determines the origin and
 ```julia
 	lla_wgs84 = LLA{WGS84}(0.0,0.0,0.0)
 	lla_wgs84_srid = SRID(LLA{WGS84})
-	convert(CRS{lla_wgs84_srid}, lla_wgs84) 
+	convert(CRS{lla_wgs84_srid}, lla_wgs84) # = CRS{EPSG4326}(0.0,0.0,0.0)
 ```
-is appropriate as the point value remains the same.  `convert` should not change values!
+is appropriate as the point value remains the same.  `convert` will not change values!
 
-1. `transform` is used for value modifying transformations, e.g.:
+1. `geotransform` is used for value modifying transformations, e.g.:
 ```julia
 	lla_wgs84 = LLA{WGS84}(0.0,0.0,0.0)
-	transform(ECEF, lla) # = ECEF{WGS84}(6.378137e6,0.0,0.0)
+	geotransform(ECEF, lla_wgs84) # = ECEF{WGS84}(6.378137e6,0.0,0.0)
 ```
 
 
@@ -64,17 +64,17 @@ is appropriate as the point value remains the same.  `convert` should not change
 lla_wgs84 = LLA{WGS84}(.1167, 51.5, 0.0)
 
 # convert to a Cartesian coordinate frame
-ecef_wgs84 = transform(ECEF, lla_wgs84)   # or equivilently:
+ecef_wgs84 = geotransform(ECEF, lla_wgs84)   # or equivilently:
 ECEF(lla_wgs84)
 
 # convert to a local coordinate frame
 lla_ref = LLA{WGS84}(.1168, 51.5, 0.0)  # center the local frame on this point
-enu_ref = transform(ENU{lla_ref}, lla_wgs84)    # = ENU{LL{WGS84}(0.1167,51.5)}(6.944051663969915,4.742430141962267e-6,-3.772299267203877e-6)
-enu_noref = transform(ENU, lla_ref, lla_wgs84)) # = ENU{???}(6.944051663969915,4.742430141962267e-6,-3.772299267203877e-6)
+enu_wref = geotransform(ENU{lla_ref}, lla_wgs84)    # = ENU{LL{WGS84}(0.1168,51.5)}(-6.944051663969915,4.742430141962267e-6,-3.772299267203877e-6)
+enu_noref = geotransform(ENU, lla_wgs84, lla_ref)  # = ENU{???}(-6.944051663969915,4.742430141962267e-6,-3.772299267203877e-6)
 
 # convert from the local coordinate frame to the LLA coordinate frame
-lla = transform(LLA, enu_ref)
-lla = transform(LLA, enu_ref, lla_wgs84)
+lla = geotransform(LLA, enu_wref)              # =LLA{WGS84}(.1167, 51.5, 0.0)
+lla = geotransform(LLA, enu_noref, lla_ref)    # =LLA{WGS84}(.1167, 51.5, 0.0)
 ```
 
 
@@ -88,16 +88,16 @@ srid = SRID{:EPSG, 32755}    													# WGS84 datum [UTM](https://en.wikiped
 utm = CRS{srid}(573105.43200000003, 086900.3839999996, 277.42700000000002) 		# a point in the above zone
 
 # convert to a coordinate sytem type
-lla_wgs84 = transform(LLA{WGS84}, utm)  # the SRID corresponding to LLA{WGS84} is known to Geodesy (see known_srids.jl).  Otherwise, 
-lla_wgs84 = convert(LLA{WGS84}, transform(SRID{:EPSG, 4326}, utm))  # EPSG4326 is SRID for for the WGS84 LLA coordinate reference system
+lla_wgs84 = geotransform(LLA{WGS84}, utm)  # the SRID corresponding to LLA{WGS84} is known to Geodesy (see known_srids.jl).  Otherwise, 
+lla_wgs84 = convert(LLA{WGS84}, geotransform(SRID{:EPSG, 4326}, utm))  # EPSG4326 is SRID for for the WGS84 LLA coordinate reference system
 
 ```
 
-##### Perform transforms on custom point types
+##### Perform transformations on custom types
 
 ```julia
 
-	import Geodesy: geodify, ungeodify
+	import Geodesy: geodify
 
 	# define a custom type
 	immutable CustomLLA
@@ -116,7 +116,7 @@ lla_wgs84 = convert(LLA{WGS84}, transform(SRID{:EPSG, 4326}, utm))  # EPSG4326 i
 	geodify(custom_lla) # = Geodesy.LLA{WGS84}(0.1167,51.5,0.0)
 
 	# and transform
-	ecef = transform(ECEF, custom_lla) # = ECEF{WGS84}(3.9786402778542214e6,8103.702688750244,4.968362457291028e6)
+	ecef = geotransform(ECEF, custom_lla) # = ECEF{WGS84}(3.9786402778542214e6,8103.702688750244,4.968362457291028e6)
 
 	# make the output a custom type as well
 	immutable CustomECEF
@@ -127,60 +127,83 @@ lla_wgs84 = convert(LLA{WGS84}, transform(SRID{:EPSG, 4326}, utm))  # EPSG4326 i
 		z::Float64
 	end
 
-	# define a conversion from the geodesy object 
-	# Notes: must include a 2nd argument that will match the input to the tranform
-    #        must supply parameters that allow the transform function to differentiate, e.g. an output type
-	ungeodify(ecef::ECEF, X::CustomLLA, ::Type{CustomECEF}) = CustomECEF(X.time, X.txt, ecef[1], ecef[2], ecef[3])
+	# define the gedoesy type required to construct it
+	geodify(::Type{CustomECEF}) = ECEF{WGS84}
+
+	# define a constructor that takes a geodesy type input, as well as the input to the transform 
+	import Base.call  
+	Base.call(::Type{CustomECEF}, ecef::ECEF, X::CustomLLA) = CustomECEF(X.time, X.txt, ecef[1], ecef[2], ecef[3])
 
 	# and transform
-	custom_ecef = transform(ECEF, custom_lla, CustomECEF) # = CustomECEF(2016-02-25T16:13:59,"test input",3.9786402778542214e6,8103.702688750244,4.968362457291028e6)
-
-	# be a little more fancy
-	ungeodify(ecef::ECEF, X::CustomLLA, t::DateTime, str::ASCIIString) = CustomECEF(t, str, ecef[1], ecef[2], ecef[3])
-
-	# and transform
-	custom_ecef = transform(ECEF, custom_lla, now(), "test output") # = CustomECEF(2016-02-25T16:05:32,"test output",3.9786402778542214e6,8103.702688750244,4.968362457291028e6)
-
+	custom_ecef = geotransform(CustomECEF, custom_lla) # = CustomECEF(2016-02-25T16:13:59,"test input",3.9786402778542214e6,8103.702688750244,4.968362457291028e6)
 
 ```
 
 
-#### A Note on Datums vs Ellipsoids and the ECEF type
+#### A Note on Datums vs Ellipsoids
 
-An ECEF coordinate system's origin should be the Earth's center of mass and have axes aligned with the International Reference Pole and International Reference Meridian ([ECEF](https://en.wikipedia.org/wiki/ECEF)].  Since the coordinate system types only use the ellipse part of the datum, they have no information to align the datums axis to the International Reference Meridian etc. 
-
-As a result the ECEF point type used in this package is simply a Cartesian coordinate system with an origin set to the parameterising ellipse's center, with axes specified by the ellipse which could point anywhere on the Earth's surface.  As an example: 
+Datums contain more information than just the reference ellipse.  Two different datums can use the same ellipse but have differenent centers (relative to a point on the Earth's surface, or have different reference poles / meridians.  Comparing points in the different datums requires having a transforming to align the two ellipses.  As an example,
 
 
 ```julia
 
-# The [vn2000 datum](https://epsg.io/4756-5194) for Vietnam, which uses the WGS84 ellipsoid
+# The [vn2000 datum](https://epsg.io/4756-5194) for Vietnam, which uses the WGS84 ellipsoid 
 vn2000 = SRID{:EPSG, 4756}  # SRID to parameterize the Coordinate Reference System
 
 # define this datum for use with Geodesy
 immutable VN2000 <: Geodesy.Datum; end
 import Geodesy: ellipsoid
-ellipsoid(::Type{VN2000}) = ellipsoid(Geodesy.WGS84_ELLIPSE)  # overload the function which retrieves the datum's ellipsoid
+ellipsoid(::Type{VN2000}) = ellipsoid(Geodesy.WGS84_ELLIPSE)  # overload the function to retrieve this datum's ellipsoid
 
 # define an LLA point in this datum
-lla = LLA{VN2000}(0, 0, 0.0)
+lla_vn2000 = LLA{VN2000}(0, 0, 0)
+crs_vn2000 = convert(CRS{vn2000}, lla_vn2000)
 
-# and convert to "ECEF" (actually just a Cartesian xyz representation)
-cart = transform(ECEF{VN2000}, lla) # = ECEF{VN2000}(6.378137e6,0.0,0.0)
-
-# now compare that to performing the transform with full datum knownledge 
-lla_crs = convert(CRS{vn2000}, lla)
-ecef = transform(ECEF{WGS84}, lla_crs) # = ECEF{WGS84}(6.377944246908978e6,-39.27841102745324,-111.1865389593214)
-
-# cast to Vectors to prevent errors
-dist = norm(Vector(cart) - Vector(ecef)) # = 225.96
+# convert this point to the WGS84 datum
+lla_wgs84 = geotransform(LLA{WGS84}, crs_vn2000)   # = LLA{WGS84}(-0.0003528546332018209,-0.0010055677147903898,-192.75199438724667)
 
 ```
-We can check the Proj4 well known text for the VN2000 datum
+
+We can check the Proj4 well known text for the VN2000 datum and see the *+towgs84* transformation parameters
+
 ```Julia
-Geodesy.proj4_str(vn2000) = "+proj=longlat +ellps=WGS84 +towgs84=-192.873,-39.382,-111.202,-0.00205,-0.0005,0.00335,0.0188 +no_defs"
+Geodesy.proj4_str(vn2000) # = "+proj=longlat +ellps=WGS84 +towgs84=-192.873,-39.382,-111.202,-0.00205,-0.0005,0.00335,0.0188 +no_defs"
 ```
-which shows it does use the WGS84 ellipse, however there is a translation and rotation to align the VN2000 datum to the WGS84 datum defined by the *+to_wgs84* parameters
+
+
+#### A Note on the ECEF type
+
+An ECEF coordinate system's origin should be the Earth's center of mass and have axes aligned with the International Reference Pole and International Reference Meridian ([ECEF](https://en.wikipedia.org/wiki/ECEF)].  Since the coordinate system types only use the ellipse part of the datum, they have no information to align the datums axis to the International Reference Meridian etc. 
+
+As a result the ECEF point type used in this package is simply a Cartesian coordinate system with an origin set to the parameterising ellipse's center, with axes specified by the ellipse which could point anywhere on the Earth's surface.  The tag ECEF is choosen for pragmatism.
+
+As an example:
+
+```julia
+lla_osgb36 = LLA{Geodesy.OSGB36}(0, 0, 0)  		# OSGB36 is a good match to the Earth in the UK but not elsewhere, and is not centered on the Earth's center of mass (i.e. not a [geocentric datum](http://support.esri.com/en/knowledgebase/GISDictionary/term/geocentric%20datum))
+cart = geotransform(ECEF, lla_osgb36) 		            # = 6.377563396e6, 0.0, 0.0
+
+# we can compare the above to the ECEF position using the WGS84 datum (a geocentric datum)
+ecef_crs = geotransform(SRID(ECEF{WGS84}), lla_osgb36) 	# = 6.377879171552554e6,-99.12039106890559, 534.423089412207
+ecef = convert(ECEF{WGS84}, ecef_crs)         	        # convert to a type native to this package (type conversion not a transformation)
+
+# or equivilently
+srid = SRID(lla_osgb36)
+lla_crs = convert(CRS{srid}, lla_osgb36)       	        # type conversion not a transformation
+geotransform(ECEF{WGS84}, lla_crs)			            # = 6.377879171552554e6,-99.12039106890559, 534.423089412207
+
+# the difference
+dist = norm(Vector(cart) - Vector(ecef))                # = 628.6072621385788
+
+# which is why we cant do this directly
+cart - ecef # = error
+
+
+```
+
+
+
+
 
 
 

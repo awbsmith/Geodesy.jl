@@ -212,6 +212,36 @@ bounds_est.max_x = Geodesy.bound_thetad(bounds_est.max_x - shift)
 
 
 
+#############################
+### Testing vectorization ###
+#############################
+
+#
+# Step 1 - Grab some points
+#
+lla_data = [147.80465755709005 -35.35851810277833 277.427 "EPSG"  4326;
+			147.80051130896    -35.35195210962327 273.8   "EPSG"  4326;
+			147.80010482270845 -35.36183505613432 267.334 "EPSG"  4326;
+			147.81089289501872 -35.36325561300782 287.688 "EPSG"  4326]
+
+# test vectorized version vs non vectorized
+Xin = convert(Vector{LLA{WGS84}}, lla_data[:, 1:3]; row=true) # = convert(Vector{CRS{srid}}, raw_data[:, 1:3]; row=true)
+ecef = geotransform(ECEF{WGS84}, Xin)
+for i = 1:length(Xin)
+	@xyz_approx_eq ecef[i] ECEF(Xin[i])
+end
+
+# test vectorization with Proj4
+auth = symbol(lla_data[1, end-1])
+code = lla_data[1, end]
+srid = SRID{auth, code}
+
+Xin = convert(Vector{CRS{srid}}, lla_data[:, 1:3]; row=true) # = convert(Vector{CRS{srid}}, raw_data[:, 1:3]; row=true)
+ecef = geotransform(ECEF{WGS84}, Xin)
+for i = 1:length(Xin)
+	@xyz_approx_eq ecef[i] ECEF{WGS84}(Xin[i])
+end
+
 
 
 
@@ -244,7 +274,7 @@ for _ = 1:10_000
 	@xy_approx_eq center(lla_bounds) lla
     @xy_approx_eq center(ll_bounds) ll
 
-	# transform to ecef
+	# geotransform to ecef
     ecefa = ECEF(lla)
     ecef = ECEF(ll)
 
@@ -286,7 +316,7 @@ for _ = 1:10_000
     @test_approx_eq_eps getZ(lla2) zdiff 1e-8
 
 	# Test the transformation matrix approach as well
-	(Rf,tf) = Geodesy.transform_params(ENU, lla2)
+	(Rf,tf) = Geodesy.geotransform_params(ENU, lla2)
 	@xyz_approx_eq_eps ENU(Rf * Vec(ecefa) + tf) enu2 1e-8
 
     # ECEF => ENU => ECEF w/ little change
@@ -294,7 +324,7 @@ for _ = 1:10_000
     @xyz_approx_eq_eps ECEF(enu2v1, lla) ecef2 1e-8
 
 	# Test the transformation matrix approach as well
-	(Rb,tb) = Geodesy.transform_params(ECEF, lla)
+	(Rb,tb) = Geodesy.geotransform_params(ECEF, lla)
 	@xyz_approx_eq_eps ECEF(Rb * Vec(enu2v1) + tb) ecef2 1e-8
 
     # ENU => LL same as ENU => ECEF => LLA
@@ -343,7 +373,7 @@ function benchmark()
 		@inbounds for i = 1:length(lla_vec)
 			mat[i,1], mat[i,2], mat[i,3] = lla_vec[i][1], lla_vec[i][2], lla_vec[i][3]
 		end
-		Proj4.transform!(Geodesy.get_projection(LLA{WGS84}), Geodesy.get_projection(ECEF{WGS84}), mat)
+		Proj4.geotransform!(Geodesy.get_projection(LLA{WGS84}), Geodesy.get_projection(ECEF{WGS84}), mat)
 	
 		ecef_vec = Vector{ECEF{WGS84}}(length(lla_vec))
 		@inbounds for i = 1:length(lla_vec)
@@ -382,8 +412,8 @@ function benchmark()
 
 	# compile stuff
 	raw_conv(lla_vec[1:1])
-	transform(ECEF, lla_vec[1:1])
-	transform(ECEF{WGS84}, lla_vec[1:1])
+	geotransform(ECEF, lla_vec[1:1])
+	geotransform(ECEF{WGS84}, lla_vec[1:1])
 	P4_conv(lla_vec[1:1])
 
 	# and test
@@ -391,10 +421,10 @@ function benchmark()
 	@time raw_conv(lla_vec)
 
 	println("Convert to ECEF")
-	@time transform(ECEF, lla_vec)
+	@time geotransform(ECEF, lla_vec)
 
 	println("Convert to ECEF{WGS84}")
-	@time transform(ECEF{WGS84}, lla_vec)
+	@time geotransform(ECEF{WGS84}, lla_vec)
 	
 	println("Convert to ECEF{WGS84} via Proj4 (matrix style)")
 	@time P4_conv(lla_vec)

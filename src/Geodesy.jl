@@ -2,15 +2,19 @@ module Geodesy
 
 using Proj4 # Proj4 is the workhorse behine the module 
 
-import Base.show, Base.call, Base.convert, Proj4.transform
+import Base.show, Base.call, Base.convert
 
 export
 
-    # Generic position types
+    # Position types that understand datums
 	CRS,	
+
+	# Position types that understand ellipsoids
 	LLA,
 	LL,
 	ECEF,
+	
+	# Local coordinate frames
 	ENU,
 
 	LLA_WGS84,   # typealias for LLA{WGS84}
@@ -25,13 +29,13 @@ export
     # Other types
     Bounds,
 
-    # Named pseudodatums
+    # Named datums
     WGS84,
     GRS80,
 	GDA94,  
 
 	# transform function
-	transform, 
+	geotransform, 
 
 	# Srid related
 	SRID,

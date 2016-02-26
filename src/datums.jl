@@ -44,7 +44,11 @@ show(io::IO, ::Type{OSGB36}) = print(io, "OSGB36")
 
 
 # The below are dynamic datums (a fixed point on the earth's surface doesn't move with continental drift)
-# (aka the datum is dynamic allowing points to be statis)
+# (aka the datum is dynamic allowing points to be static)
+"""
+When using a "dynamic" datum fixed points on the Earths surface have constant coordinates (static) over time, because the datum changes (dynamic) over time to account for effects like continental drift.  
+Any accurate transformation between static and dynamic datums should include a time,
+"""
 abstract DynDatum <: KnownDatum 
 
 # Australia

@@ -1,7 +1,7 @@
 
 ###########################################
 # defines methods to add to point types
-# Note the "transform" function handles all transformations
+# Note the "geotransform" function handles all transformations
 # while the "convert" function converts types leaving values unchanged
 ###########################################
 
@@ -48,9 +48,9 @@ get_up{T <: Vec3_fam}(X::T) = X[3]
 # Template parameter manipultation
 #####################################################
 
-# replace TypeVar parameter with a DataType parameter where needed
+# replace a TypeVar parameter with a DataType parameter where needed
 
-#TODO: Should these be promote rules?
+#TODO: Should these be promote rules or something?
 
 #add_param{T <: ELL_param_fam}(::Type{T}) = typeof(T.parameters[1]) == DataType ? T : T{UnknownDatum}  # not type safe :-(
 @generated add_param{T <: ELL_param_fam}(::Type{T}) = (typeof(T.parameters[1]) == DataType) ? :(T) :  :(T{UnknownDatum})
@@ -111,25 +111,25 @@ get_projection{T <: Union{WorldPosition, WorldSurfacePosition}}(::Type{T}) = get
 #
 # Allow LL <-> LLA
 #
-transform{T}(::Type{LL{T}}, lla::LLA{T}) = LL{T}(lla.lon, lla.lat)
-transform{T}(::Type{LL}, lla::LLA{T}) = LL{T}(lla.lon, lla.lat)
+geotransform{T}(::Type{LL{T}}, lla::LLA{T}) = LL{T}(lla.lon, lla.lat)
+geotransform{T}(::Type{LL}, lla::LLA{T}) = LL{T}(lla.lon, lla.lat)
 
-transform{T}(::Type{LLA{T}}, ll::LL{T}) = LLA{T}(lla.lon, lla.lat, 0.0)
-transform{T}(::Type{LLA}, ll::LL{T}) = LLA{T}(lla.lon, lla.lat, 0.0)
+geotransform{T}(::Type{LLA{T}}, ll::LL{T}) = LLA{T}(lla.lon, lla.lat, 0.0)
+geotransform{T}(::Type{LLA}, ll::LL{T}) = LLA{T}(lla.lon, lla.lat, 0.0)
 
 
 # No conversions, stripping or adding the template parameters
 macro default_convs(type_name, known_subtype, null_subtype)
 	eval(quote
 
-		# transform it to itself (i.e. do nothing)
-		transform{T}(::Type{$(type_name){T}}, X::$(type_name){T}) = X
+		# geotransform it to itself (i.e. do nothing)
+		geotransform{T}(::Type{$(type_name){T}}, X::$(type_name){T}) = X
 
 		# allow stripping the template parameter from the template
-		transform{T <: $(known_subtype)}(::Type{$(type_name){$(null_subtype)}}, X::$(type_name){T}) = $(type_name){$(null_subtype)}(X...)
+		geotransform{T <: $(known_subtype)}(::Type{$(type_name){$(null_subtype)}}, X::$(type_name){T}) = $(type_name){$(null_subtype)}(X...)
 
 		# allow inserting a template parameter into the template
-		transform{T <: $(known_subtype)}(::Type{$(type_name){T}}, X::$(type_name){$(null_subtype)}) = $(type_name){T}(X...)
+		geotransform{T <: $(known_subtype)}(::Type{$(type_name){T}}, X::$(type_name){$(null_subtype)}) = $(type_name){T}(X...)
 
     end)
 end
@@ -141,8 +141,8 @@ end
 @default_convs(ENU, LLA, UnknownRef)
 
 # dont macro srid type's, we don't want to allow stripping of the SRID 
-transform{T <: SRID}(::Type{CRS}, X::CRS{T}) = X  
-transform{T <: SRID}(::Type{CRS{T}}, X::CRS{T}) = X		   	
+geotransform{T <: SRID}(::Type{CRS}, X::CRS{T}) = X  
+geotransform{T <: SRID}(::Type{CRS{T}}, X::CRS{T}) = X		   	
 
 
 #
@@ -152,11 +152,11 @@ macro add_cross_const(Type1, Type2)
 	eval(quote
 
 		# copy constructor for the first one
-		call{T <: $(Type1), U <: $(Type1)}(::Type{T}, X::U) = transform(T, X)
+		call{T <: $(Type1), U <: $(Type1)}(::Type{T}, X::U) = geotransform(T, X)
 
 		# and the cross versions
-		call{T <: $(Type1), U <: $(Type2)}(::Type{T}, X::U) = transform(T, X)
-		call{T <: $(Type2), U <: $(Type1)}(::Type{T}, X::U) = transform(T, X)
+		call{T <: $(Type1), U <: $(Type2)}(::Type{T}, X::U) = geotransform(T, X)
+		call{T <: $(Type2), U <: $(Type1)}(::Type{T}, X::U) = geotransform(T, X)
     end)
 end
 @add_cross_const(WorldPosition, LocalPosition)
@@ -167,8 +167,8 @@ end
 #
 # constructing one point type from another and a reference
 #
-call{T <: Local_fam}(::Type{T}, X::World_fam, ll_ref::LL_fam) = transform(T, X, ll_ref)
-call{T <: World_fam}(::Type{T}, X::Local_fam, ll_ref::LL_fam) = transform(T, X, ll_ref)
+call{T <: Local_fam}(::Type{T}, X::World_fam, ll_ref::LL_fam) = geotransform(T, X, ll_ref)
+call{T <: World_fam}(::Type{T}, X::Local_fam, ll_ref::LL_fam) = geotransform(T, X, ll_ref)
 
 
 #
@@ -181,7 +181,7 @@ function convert{T <: Geodesy_fam}(::Type{Vector{T}}, X::AbstractMatrix; row::Bo
 	if (T <: Vec2_fam) && row 
 		for i = 1:n; Xout[i] = oT(X[i,1], X[i,2]); end
 	elseif (row)
-		for i = 1:n; Xout[i] = oT(X[i,1], X[i,2], X[i],3); end
+		for i = 1:n; Xout[i] = oT(X[i,1], X[i,2], X[i,3]); end
 	elseif (T <: Vec2_fam)
 		for i = 1:n; Xout[i] = oT(X[1,i], X[2,i]); end
 	else
@@ -219,7 +219,7 @@ add_param{T <: LL_param_fam, U <: Geodesy_fam}(::Type{T}, ::Type{U}) = add_param
 ####################################
 
 # a vectorized way to perform transformations
-function transform{T <: Geodesy_fam, U <: Geodesy_fam}(::Type{T}, X::Vector{U})
+function geotransform{T <: Geodesy_fam, U <: Geodesy_fam}(::Type{T}, X::Vector{U})
 
 	# make sure the output parameter is filled
 	oT =  add_param(T, U)
@@ -230,7 +230,7 @@ function transform{T <: Geodesy_fam, U <: Geodesy_fam}(::Type{T}, X::Vector{U})
 	else
 		Xout = Vector{oT}(length(X))
 		@inbounds for i = 1:length(X)
-			Xout[i] = transform(oT, X[i])
+			Xout[i] = geotransform(oT, X[i])
 		end
 	end
 	return Xout
@@ -238,23 +238,24 @@ end
 
 
 # a vectorized way to perform transformations with reference points
-function transform{T <: Geodesy_fam, U <: Geodesy_fam, V <: LL_fam}(::Type{T}, X::Vector{U}, ll_ref::V)
+function geotransform{T <: Geodesy_fam, U <: Geodesy_fam, V <: LL_fam}(::Type{T}, X::Vector{U}, ll_ref::V)
 
 	# get inputs and desired output types
 	oT = add_param(T, V)
 
 	Xout = Vector{oT}(length(X))
 	@inbounds for i = 1:length(X)
-		Xout[i] = transform(oT, X[i], ll_ref)
+		Xout[i] = geotransform(oT, X[i], ll_ref)
 	end
 	return Xout
 end
 
 
+# worker code for proj4 vectorization (looping prj4 is slow)
 function proj4_vectorized{T <: Proj4_fam, U <: Proj4_fam}(::Type{T}, X::Vector{U})
 
 	if !((T <: CRS) || (U <: CRS))
-		warn("Unexpected: using Proj4 to transform between Geodesy point types.  How'd this happen")
+		warn("Unexpected: using Proj4 to geotransform between Geodesy point types.  How'd this happen")
 	end
 
 	# convert to a matrix 
@@ -262,7 +263,7 @@ function proj4_vectorized{T <: Proj4_fam, U <: Proj4_fam}(::Type{T}, X::Vector{U
 	@inbounds for i = 1:length(X)
 		mat[i, 1] = X[i][1]
 		mat[i, 2] = X[i][2]
-		mat[i, 3] = U <: Vec2_fam ? X[i][3] : 0.0
+		mat[i, 3] = U <: Vec2_fam ? 0.0 : X[i][3]
 	end
 
 	# perform it

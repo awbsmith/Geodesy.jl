@@ -7,32 +7,32 @@
 ##############################################
 
 
-function transform{T <: SRID, U <: SRID}(::Type{T}, X::CRS{U}) 
+function geotransform{T <: SRID, U <: SRID}(::Type{T}, X::CRS{U}) 
 	Y = Proj4.transform(get_projection(U), get_projection(T), Vector(X))
 	out = CRS{T}(Y[1], Y[2], Y[3])
 end
-transform{T <: SRID, U <: SRID}(::Type{CRS{T}}, X::CRS{U}) = transform(T, X)
+geotransform{T <: SRID, U <: SRID}(::Type{CRS{T}}, X::CRS{U}) = geotransform(T, X)
 
 
 # X -> SRID
-function transform{T <: SRID, U <: Proj4_fam}(::Type{T}, X::U)
+function geotransform{T <: SRID, U <: Proj4_fam}(::Type{T}, X::U)
 	iU = add_param(U)
 	if T == SRID(iU)
-		out = CRS{T}(X[1], X[2], X[3])  # not actually a transform.  Should probably be a convert method?
+		out = CRS{T}(X[1], X[2], X[3])  # not actually a geotransform.  Should probably be a convert method?
 	else
 		Y = Proj4.transform(get_projection(iU), get_projection(T), [X[1], X[2], X[3]], false)	
 		out = CRS{T}(Y[1], Y[2], Y[3])
 	end
 	return out
 end
-transform{T <: SRID}(::Type{CRS{T}}, X::Union{ECEF, LLA}) = Proj4.transform(T, X)      # but this version is the same syntax as the reverse of the transform
+geotransform{T <: SRID}(::Type{CRS{T}}, X::Union{ECEF, LLA}) = Proj4.transform(T, X)      # but this version is the same syntax as the reverse of the geotransform
 
 
 # SRID -> X
-function transform{T <: Proj4_fam, U <: SRID}(::Type{T}, X::CRS{U})
+function geotransform{T <: Proj4_fam, U <: SRID}(::Type{T}, X::CRS{U})
 	iT = add_param(T)
 	if SRID(iT) == U
-		out = iT(X[1], X[2], X[3])  # not actually a transform.  Should probably be a convert method?
+		out = iT(X[1], X[2], X[3])  # not actually a geotransform.  Should probably be a convert method?
 	else
 		Y = Proj4.transform(get_projection(U), get_projection(iT), [X[1], X[2], X[3]], false)	
 		out = iT(Y[1], Y[2], Y[3])
@@ -63,16 +63,16 @@ function lla_to_ecef{T <: ECEF, U <: LL_fam}(::Type{T}, ll::U, d::Ellipsoid)
 end
 
 # dont allow datum / ellipse transforms within Geodesy
-transform{T <: KnownDatum, U <: KnownDatum}(::Type{ECEF{T}}, lla::Union{LLA{U}, LL{U}}) = error("Ellipse / datum transforms should be be done explicitly via CRS point types\nIf you're sure what you're doing is correct you can transform the input position to type LLA_NULL")
+geotransform{T <: KnownDatum, U <: KnownDatum}(::Type{ECEF{T}}, lla::Union{LLA{U}, LL{U}}) = error("Ellipse / datum transforms should be be done explicitly via CRS point types\nIf you're sure what you're doing is correct you can transform the input position to type LLA_NULL")
 
 # must specify the ellipse somewhere
-transform{T <: UnknownDatum}(::Type{ECEF{T}}, lla::Union{LLA{T}, LL{T}}) = error("An ellipse must be specified in either the input or the output types")
+geotransform{T <: UnknownDatum}(::Type{ECEF{T}}, lla::Union{LLA{T}, LL{T}}) = error("An ellipse must be specified in either the input or the output types")
 
 # other combos
-transform{T <: KnownDatum}(::Type{ECEF{T}}, lla::Union{LLA{T}, LL{T}}) =  lla_to_ecef(ECEF{T}, lla, ellipsoid(T))
-transform{T <: KnownDatum}(::Type{ECEF_NULL}, lla::Union{LLA{T}, LL{T}}) = lla_to_ecef(ECEF_NULL, lla, ellipsoid(T))
-transform{T <: KnownDatum}(::Type{ECEF{T}}, lla::LLA_NULL) = lla_to_ecef(ECEF{T}, lla, ellipsoid(T))
-transform{T <: KnownDatum}(::Type{ECEF}, lla::Union{LLA{T}, LL{T}}) = lla_to_ecef(ECEF{T}, lla, ellipsoid(T))
+geotransform{T <: KnownDatum}(::Type{ECEF{T}}, lla::Union{LLA{T}, LL{T}}) =  lla_to_ecef(ECEF{T}, lla, ellipsoid(T))
+geotransform{T <: KnownDatum}(::Type{ECEF_NULL}, lla::Union{LLA{T}, LL{T}}) = lla_to_ecef(ECEF_NULL, lla, ellipsoid(T))
+geotransform{T <: KnownDatum}(::Type{ECEF{T}}, lla::LLA_NULL) = lla_to_ecef(ECEF{T}, lla, ellipsoid(T))
+geotransform{T <: KnownDatum}(::Type{ECEF}, lla::Union{LLA{T}, LL{T}}) = lla_to_ecef(ECEF{T}, lla, ellipsoid(T))
 
 
 ###############################
@@ -96,20 +96,20 @@ function ecef_to_lla{T <: LLA, U <: AbstractDatum}(::Type{T}, ecef::ECEF{U}, d::
 end
 
 # dont allow datum / ellipse transforms
-transform{T <: KnownDatum, U <: KnownDatum}(::Type{LLA{T}}, ecef::ECEF{U}) = error("Ellipse / datum transforms should be be done explicitly via CRS point types\nIf you're sure what you're doing is correct you can transform the input position to type ECEF_NULL")
+geotransform{T <: KnownDatum, U <: KnownDatum}(::Type{LLA{T}}, ecef::ECEF{U}) = error("Ellipse / datum transforms should be be done explicitly via CRS point types\nIf you're sure what you're doing is correct you can transform the input position to type ECEF_NULL")
 
 # must specify the ellipse somewhere
-transform{T <: UnknownDatum}(::Type{LLA{T}}, ecef::ECEF{T}) = error("An ellipse must be specified in either the input or the output types")
+geotransform{T <: UnknownDatum}(::Type{LLA{T}}, ecef::ECEF{T}) = error("An ellipse must be specified in either the input or the output types")
 
 # other combos
-transform{T <: KnownDatum}(::Type{LLA{T}}, ecef::ECEF{T}) = ecef_to_lla(LLA{T}, ecef, ellipsoid(T))
-transform{T <: KnownDatum}(::Type{LLA_NULL}, ecef::ECEF{T}) = ecef_to_lla(LLA_NULL, ecef, ellipsoid(T))
-transform{T <: KnownDatum}(::Type{LLA{T}}, ecef::ECEF_NULL) = ecef_to_lla(LLA{T}, ecef, ellipsoid(T))
-transform{T <: KnownDatum}(::Type{LLA}, ecef::ECEF{T}) = ecef_to_lla(LLA{T}, ecef, ellipsoid(T))
+geotransform{T <: KnownDatum}(::Type{LLA{T}}, ecef::ECEF{T}) = ecef_to_lla(LLA{T}, ecef, ellipsoid(T))
+geotransform{T <: KnownDatum}(::Type{LLA_NULL}, ecef::ECEF{T}) = ecef_to_lla(LLA_NULL, ecef, ellipsoid(T))
+geotransform{T <: KnownDatum}(::Type{LLA{T}}, ecef::ECEF_NULL) = ecef_to_lla(LLA{T}, ecef, ellipsoid(T))
+geotransform{T <: KnownDatum}(::Type{LLA}, ecef::ECEF{T}) = ecef_to_lla(LLA{T}, ecef, ellipsoid(T))
 
 # Should this exist?
-transform{T <: AbstractDatum}(::Type{LL{T}}, ecef::ECEF) = transform(LL{T}, ecef_to_lla(LLA{T}, ecef, ellipsoid(T)))
-transform{T <: AbstractDatum}(::Type{LL}, ecef::ECEF{T}) = transform(LL{T}, ecef_to_lla(LLA{T}, ecef, ellipsoid(T)))
+geotransform{T <: AbstractDatum}(::Type{LL{T}}, ecef::ECEF) = geotransform(LL{T}, ecef_to_lla(LLA{T}, ecef, ellipsoid(T)))
+geotransform{T <: AbstractDatum}(::Type{LL}, ecef::ECEF{T}) = geotransform(LL{T}, ecef_to_lla(LLA{T}, ecef, ellipsoid(T)))
 
 
 
@@ -156,20 +156,20 @@ end
 
 
 # make the two parameter forms default to using a point as a reference
-transform{T}(::Type{ENU}, ecef::ECEF{T}) = error("must supply the reference point in the ENU type or as an additional input")
-transform{T <: ENU}(::Type{T}, ecef::ECEF) = add_LL_ref(T)(ecef_to_enu(ecef, LL_ref(T))...)   # user specified, wonderful
+geotransform{T}(::Type{ENU}, ecef::ECEF{T}) = error("must supply the reference point in the ENU type or as an additional input")
+geotransform{T <: ENU}(::Type{T}, ecef::ECEF) = add_LL_ref(T)(ecef_to_enu(ecef, LL_ref(T))...)   # user specified, wonderful
 
 # return the null reference point variety
-transform{T}(::Type{ENU_NULL}, ecef::ECEF{T}, ll_ref::Union{LLA{T}, LL{T}}) = ENU_NULL(ecef_to_enu(ecef, ll_ref)...)
-transform{T}(::Type{ENU}, ecef::ECEF{T}, ll_ref::Union{LLA{T}, LL{T}}) = ENU_NULL(ecef_to_enu(ecef, ll_ref)...)
-transform{T <: LLA}(::Type{ENU{T}}, ecef::ECEF, ll_ref::LLA) = error("Don't specify both the reference point in the type and provide it as an argument")
+geotransform{T}(::Type{ENU_NULL}, ecef::ECEF{T}, ll_ref::Union{LLA{T}, LL{T}}) = ENU_NULL(ecef_to_enu(ecef, ll_ref)...)
+geotransform{T}(::Type{ENU}, ecef::ECEF{T}, ll_ref::Union{LLA{T}, LL{T}}) = ENU_NULL(ecef_to_enu(ecef, ll_ref)...)
+geotransform{T <: LLA}(::Type{ENU{T}}, ecef::ECEF, ll_ref::LLA) = error("Don't specify both the reference point in the type and provide it as an argument")
 
 
 # worker function
 function ecef_to_enu{T}(ecef::ECEF{T}, ll_ref::Union{LLA{T}, LL{T}})
     ϕdeg, λdeg = ll_ref.lat, ll_ref.lon
 
-    ecef_ref = transform(ECEF{T}, ll_ref)
+    ecef_ref = geotransform(ECEF{T}, ll_ref)
     Δx = ecef.x - ecef_ref.x
     Δy = ecef.y - ecef_ref.y
     Δz = ecef.z - ecef_ref.z
@@ -195,14 +195,14 @@ end
 ###############################################
 
 """ 
-Returns the rotation and translation to transform an ECEF point to a point
+Returns the rotation and translation to geotransform an ECEF point to a point
 centered on ll_ref in the ENU frame:
 
-(R, t) = transform_params(ENU, ll_ref)
+(R, t) = geotransform_params(ENU, ll_ref)
 X_enu = ENU(R * Vec(X_ecef) + t)  # using FixedSizeArrays
  
 """
-function transform_params{T}(::Type{ENU}, ll_ref::Union{LLA{T}, LL{T}})
+function geotransform_params{T}(::Type{ENU}, ll_ref::Union{LLA{T}, LL{T}})
 	
 	ϕdeg, λdeg = ll_ref.lat, ll_ref.lon
 
@@ -222,7 +222,7 @@ function transform_params{T}(::Type{ENU}, ll_ref::Union{LLA{T}, LL{T}})
 	return (R, t)
 	
 end
-transform_params{T <: ENU}(::Type{T}) = transform_params(ENU, LL_ref(T))
+geotransform_params{T <: ENU}(::Type{T}) = geotransform_params(ENU, LL_ref(T))
 
 
 
@@ -231,14 +231,14 @@ transform_params{T <: ENU}(::Type{T}) = transform_params(ENU, LL_ref(T))
 ###############################
 
 # convert to ECEF when the LL reference position is included in the ENU template
-transform{T, U}(::Type{ECEF{T}}, enu::ENU{U}) = transform(ECEF{T}, enu_to_ecef(ECEF{ELL_type(U)}, enu, U))
-transform{T}(::Type{ECEF}, enu::ENU{T}) = enu_to_ecef(ECEF{ELL_type(T)}, enu, T)
+geotransform{T, U}(::Type{ECEF{T}}, enu::ENU{U}) = geotransform(ECEF{T}, enu_to_ecef(ECEF{ELL_type(U)}, enu, U))
+geotransform{T}(::Type{ECEF}, enu::ENU{T}) = enu_to_ecef(ECEF{ELL_type(T)}, enu, T)
 
 
 # convert to ECEF when the LL reference position is not included in the ENU template
-transform{T}(::Type{ECEF}, enu::ENU, ll_ref::Union{LLA{T}, LL{T}}) = enu_to_ecef(ECEF{T}, enu, ll_ref)
-transform{T}(::Type{ECEF{T}}, enu::ENU, ll_ref::Union{LLA{T}, LL{T}}) = enu_to_ecef(ECEF{T}, enu, ll_ref)
-transform{T}(::Type{ECEF_NULL}, enu::ENU, ll_ref::Union{LLA{T}, LL{T}}) = enu_to_ecef(ECEF_NULL, enu, ll_ref)
+geotransform{T}(::Type{ECEF}, enu::ENU, ll_ref::Union{LLA{T}, LL{T}}) = enu_to_ecef(ECEF{T}, enu, ll_ref)
+geotransform{T}(::Type{ECEF{T}}, enu::ENU, ll_ref::Union{LLA{T}, LL{T}}) = enu_to_ecef(ECEF{T}, enu, ll_ref)
+geotransform{T}(::Type{ECEF_NULL}, enu::ENU, ll_ref::Union{LLA{T}, LL{T}}) = enu_to_ecef(ECEF_NULL, enu, ll_ref)
 
 
 
@@ -247,7 +247,7 @@ function enu_to_ecef{T <: ECEF, U}(::Type{T}, enu::ENU, ll_ref::Union{LL{U}, LLA
     
 	ϕdeg, λdeg = ll_ref.lat, ll_ref.lon
 
-    ecef_ref = transform(ECEF{U}, ll_ref)
+    ecef_ref = geotransform(ECEF{U}, ll_ref)
 
     # Compute rotation matrix
     sinλ, cosλ = sind(λdeg), cosd(λdeg)
@@ -278,15 +278,15 @@ end
 # no LLA reference provided in the ENU type so a LLA ref must be supplied
 # N.B. this will ignore the LLA refernce in ENU template
 """ 
-Returns the rotation and translation to transform a point in the ENU frame
+Returns the rotation and translation to geotransform a point in the ENU frame
 centerd on ll_ref into an ECEF point:
 
-(R, t) = transform_params(ECEF, ll_ref)  
+(R, t) = geotransform_params(ECEF, ll_ref)  
 
 X_ecef = ECEF(R * Vec(X_enu) + t)  # using FixedSizeArrays
  
 """
-function transform_params{T, U <: Union{LLA, LL}}(::Type{ECEF{T}}, ll_ref::U)
+function geotransform_params{T, U <: Union{LLA, LL}}(::Type{ECEF{T}}, ll_ref::U)
 	
 	ϕdeg, λdeg = ll_ref.lat, ll_ref.lon
 
@@ -306,7 +306,7 @@ function transform_params{T, U <: Union{LLA, LL}}(::Type{ECEF{T}}, ll_ref::U)
 	return (R, t)
 	
 end
-transform_params{T}(::Type{ECEF}, ll_ref::Union{LLA{T}, LL{T}}) = transform_params(ECEF{T}, ll_ref)
+geotransform_params{T}(::Type{ECEF}, ll_ref::Union{LLA{T}, LL{T}}) = geotransform_params(ECEF{T}, ll_ref)
 
 
 ##############################
@@ -314,14 +314,14 @@ transform_params{T}(::Type{ECEF}, ll_ref::Union{LLA{T}, LL{T}}) = transform_para
 ##############################
 
 # make the two parameter forms default to using a point as a reference
-transform{T <: Union{LLA, LL}}(::Type{ENU}, lla::T) = error("must supply the reference point in the ENU type or as an additional input")
-transform{T <: ENU, U <: Union{LLA, LL}}(::Type{T}, lla::U) = add_LL_ref(T)(ecef_to_enu(transform(ECEF{ELL_type(T)}, lla), LL_ref(T))...)   # user specified, wonderful
+geotransform{T <: Union{LLA, LL}}(::Type{ENU}, lla::T) = error("must supply the reference point in the ENU type or as an additional input")
+geotransform{T <: ENU, U <: Union{LLA, LL}}(::Type{T}, lla::U) = add_LL_ref(T)(ecef_to_enu(geotransform(ECEF{ELL_type(T)}, lla), LL_ref(T))...)   # user specified, wonderful
 
 
 # return the null reference point variety
-transform{T}(::Type{ENU_NULL}, lla::Union{LLA{T}, LL{T}}, ll_ref::Union{LLA{T}, LL{T}}) = ENU_NULL(ecef_to_enu(transform(ECEF{T}, lla), ll_ref)...)
-transform{T}(::Type{ENU}, lla::Union{LLA{T}, LL{T}}, ll_ref::Union{LLA{T}, LL{T}}) = ENU_NULL(ecef_to_enu(transform(ECEF{T}, lla), ll_ref)...)
-transform{T <: LLA}(::Type{ENU{T}}, lla::LLA, ll_ref::LLA) = error("Don't specify both the reference point in the type and provide it as an argument")
+geotransform{T}(::Type{ENU_NULL}, lla::Union{LLA{T}, LL{T}}, ll_ref::Union{LLA{T}, LL{T}}) = ENU_NULL(ecef_to_enu(geotransform(ECEF{T}, lla), ll_ref)...)
+geotransform{T}(::Type{ENU}, lla::Union{LLA{T}, LL{T}}, ll_ref::Union{LLA{T}, LL{T}}) = ENU_NULL(ecef_to_enu(geotransform(ECEF{T}, lla), ll_ref)...)
+geotransform{T <: LLA}(::Type{ENU{T}}, lla::LLA, ll_ref::LLA) = error("Don't specify both the reference point in the type and provide it as an argument")
 
 
 
@@ -332,22 +332,22 @@ transform{T <: LLA}(::Type{ENU{T}}, lla::LLA, ll_ref::LLA) = error("Don't specif
 ################################
 
 # convert to LLA when the LLA reference position is included in the ENU template
-transform{T, U <: ENU}(::Type{LLA{T}}, enu::U) = transform(LLA{T}, enu_to_ecef(ECEF{ELL_type(U)}, enu, LL_ref(U)))
-transform{T <: ENU}(::Type{LLA}, enu::T) = transform(LLA{ELL_type(T)}, enu_to_ecef(ECEF{ELL_type(T)}, enu, LL_ref(T)))
+geotransform{T, U <: ENU}(::Type{LLA{T}}, enu::U) = geotransform(LLA{T}, enu_to_ecef(ECEF{ELL_type(U)}, enu, LL_ref(U)))
+geotransform{T <: ENU}(::Type{LLA}, enu::T) = geotransform(LLA{ELL_type(T)}, enu_to_ecef(ECEF{ELL_type(T)}, enu, LL_ref(T)))
 
 # Should this exist?
-transform{T, U <: ENU}(::Type{LL{T}}, enu::U) = transform(LLA{T}, enu_to_ecef(ECEF{ELL_type(U)}, enu, LL_ref(U)))
-transform{T <: ENU}(::Type{LL}, enu::T) = transform(LLA{ELL_type(T)}, enu_to_ecef(ECEF{ELL_type(T)}, enu, LL_ref(T)))
+geotransform{T, U <: ENU}(::Type{LL{T}}, enu::U) = geotransform(LLA{T}, enu_to_ecef(ECEF{ELL_type(U)}, enu, LL_ref(U)))
+geotransform{T <: ENU}(::Type{LL}, enu::T) = geotransform(LLA{ELL_type(T)}, enu_to_ecef(ECEF{ELL_type(T)}, enu, LL_ref(T)))
 
 
 # convert to LLA when the LLA reference position is not included in the ENU template
-transform{T}(::Type{LLA}, enu::ENU, ll_ref::Union{LLA{T}, LL{T}}) = transform(LLA{T}, enu_to_ecef(ECEF{T}, enu, ll_ref))
-transform{T}(::Type{LLA{T}}, enu::ENU, ll_ref::Union{LLA{T}, LL{T}}) = transform(LLA{T}, enu_to_ecef(ECEF{T}, enu, ll_ref))
+geotransform{T}(::Type{LLA}, enu::ENU, ll_ref::Union{LLA{T}, LL{T}}) = geotransform(LLA{T}, enu_to_ecef(ECEF{T}, enu, ll_ref))
+geotransform{T}(::Type{LLA{T}}, enu::ENU, ll_ref::Union{LLA{T}, LL{T}}) = geotransform(LLA{T}, enu_to_ecef(ECEF{T}, enu, ll_ref))
 
 
 # Should this exist?
-transform{T <: AbstractDatum}(::Type{LL{T}}, enu::ENU, ll_ref::Union{LLA{T}, LL{T}}) = transform(LL{T}, enu_to_ecef(ECEF{T}, enu, ll_ref))
-transform{T <: AbstractDatum}(::Type{LL}, enu::ENU, ll_ref::Union{LLA{T}, LL{T}}) = transform(LL{T}, enu_to_ecef(ECEF{T}, enu, ll_ref))
+geotransform{T <: AbstractDatum}(::Type{LL{T}}, enu::ENU, ll_ref::Union{LLA{T}, LL{T}}) = geotransform(LL{T}, enu_to_ecef(ECEF{T}, enu, ll_ref))
+geotransform{T <: AbstractDatum}(::Type{LL}, enu::ENU, ll_ref::Union{LLA{T}, LL{T}}) = geotransform(LL{T}, enu_to_ecef(ECEF{T}, enu, ll_ref))
 
 
 

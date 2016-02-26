@@ -30,7 +30,7 @@ abstract  WorldHeight <: Real
 
 # proj4 backs this and is lon lat ordering
 """
-Point in Longitude-Latitude-Altitude (LLA) coordinates defined for the specified ellipse
+Point in Longitude-Latitude-Altitude (LLA) coordinates defined for the specified datum / ellipse.  The latitude coordinate is a geodetic latitude.
 
 Use LLA_NULL(lon, lat, alt) if you don't want to encode the reference ellipse in the type
 """
@@ -106,7 +106,9 @@ SRID{T}(::Type{CRS{T}}) = T
 ### Point in Latitude-Longitude (LL) coordinates
 # proj4 is lon lat ordering
 """
-Point in Longitude-Latitude (LL) coordinates defined for the specified ellipse.  Assume the height above the ellipsoid is 0
+Point in Longitude-Latitude (LL) coordinates defined for the specified datum / ellipse.  The latitude coordinate is a geodetic latitude.
+
+Assumes the height above the ellipsoid is 0
 """
 immutable LL{T <: AbstractDatum} <: WorldSurfacePosition
 	lon::Float64  # proj 4 is lon lat    

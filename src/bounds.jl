@@ -92,7 +92,7 @@ function call{T <: Geodesy_fam, U <: LL_fam}(::Type{Bounds{T}}, bounds::Bounds{U
     end
 
     for x_ll in xs, y_ll in ys
-        pt = transform(oT, U(x_ll, y_ll), ll_ref)
+        pt = geotransform(oT, U(x_ll, y_ll), ll_ref)
         x, y = getX(pt), getY(pt)
 
         min_x, max_x = min(x, min_x), max(x, max_x)
