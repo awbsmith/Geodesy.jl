@@ -9,7 +9,7 @@ let lla = LLA(1, 2, 3)
 end
 
 randLLA() = LLA{WGS84}((rand() - .5) * 360,
-				       (rand() - .5) * 180,
+                       (rand() - .5) * 180,
                        (rand() - .5) * 18_000)
 
 # Test ECEF/ENU distance equivalence

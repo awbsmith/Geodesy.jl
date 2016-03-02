@@ -35,8 +35,8 @@ Point in Longitude-Latitude-Altitude (LLA) coordinates defined for the specified
 Use LLA_NULL(lon, lat, alt) if you don't want to encode the reference ellipse in the type
 """
 immutable LLA{T <: AbstractDatum} <: WorldPosition
-	lon::Float64    
-	lat::Float64
+    lon::Float64    
+    lat::Float64
     alt::Float64
 end
 
@@ -53,9 +53,9 @@ Cartesian cooridnates for a point on an ellipse
 
 Warning: This is a Cartesian system centered on the ellipse's center and with axis direction specified by the ellipse.  This is not necessarily a "proper" ECEF frame, which would be centered on the Earth's center of mass with axis direction given by the International Reference Pole (IRP) and International Reference Meridian
 
-		 Example:
+         Example:
          the "eAiry" ellipse's center is not the Earth's center of mass, so converting from an eAiry based datum LLA{OSGB36} to ECEF{OSGB36} will not give a true ECEF position.  Use the SRID
-		 point type to get a true ECEF position if its required.
+         point type to get a true ECEF position if its required.
 
 
 Use ECEF_NULL(lon, lat, alt) if you don't want to encode the reference ellipse in the type
@@ -77,13 +77,13 @@ Points with a full coordinate reference system as defined by an SRID identifier 
 Its up to the user to determine the what the x / y / z fields actually represent; which is governed by the element order in Proj4
 
 For a quick reference:
-	lat long style CRS's,  x -> lon, y -> lat (or getlat() and getlon())
+    lat long style CRS's,  x -> lon, y -> lat (or getlat() and getlon())
     utm style CRS's,  x -> false east, y -> false north, z -> up (or geteast() getnorth() getup())
 """
 immutable CRS{T <: SRID} <: WorldPosition
-   	x::Float64
+       x::Float64
     y::Float64
-	z::Float64
+    z::Float64
 end
 
 
@@ -111,9 +111,9 @@ Point in Longitude-Latitude (LL) coordinates defined for the specified datum / e
 Assumes the height above the ellipsoid is 0
 """
 immutable LL{T <: AbstractDatum} <: WorldSurfacePosition
-	lon::Float64  # proj 4 is lon lat    
-	lat::Float64
-	LL(x::Real, y::Real) = new(x, y)  # need to specify a constructor to stop the default constructor overwriting the FixedVectorNoTuple{2, Float64} constructors
+    lon::Float64  # proj 4 is lon lat    
+    lat::Float64
+    LL(x::Real, y::Real) = new(x, y)  # need to specify a constructor to stop the default constructor overwriting the FixedVectorNoTuple{2, Float64} constructors
 end
 
 
@@ -130,19 +130,19 @@ typealias LL_NULL LL{UnknownDatum}
 
 # TODO something with this
 immutable EllipHeight{T <: Ellipsoid} <: WorldHeight
-	h::Float64
+    h::Float64
 end
 
 # TODO: custom geoid heights
 immutable GeoidHeight{T <: AbstractGeoid} <: WorldHeight
-	h::Float64
+    h::Float64
 end
 
 
 
 ######################################################################################
-### Experimental, compound coordinate reference systems (CCRS) 					   ###
-### Its not intended to work with these, just transform them to/from other types   ###	
+### Experimental, compound coordinate reference systems (CCRS)                        ###
+### Its not intended to work with these, just transform them to/from other types   ###    
 ######################################################################################
 
 """
@@ -155,9 +155,9 @@ abstract AbstractCCRS{T, U} <: WorldPosition
 Compound coordinate reference system where the height is geoidal
 """
 immutable CCRS_Geoid{T <: SRID, U <: AbstractGeoid} <: AbstractCCRS{T, U}
-	x::Float64
-	y::Float64
-	z::Float64
+    x::Float64
+    y::Float64
+    z::Float64
 end
 
 
@@ -189,8 +189,8 @@ immutable ENU{T} <: LocalPosition   # T should be either UnknownRef or an LL pos
 end
 
 typealias ENU_NULL ENU{UnknownRef}
-call(::Type{ENU}, e::Real, n::Real) = ENU_NULL(e,n,0.0)  						    # idk
-call(::Type{ENU}, e::Real, n::Real, u::Real) = ENU_NULL(e,n,u)  					# allow default constructuction with no reference position
+call(::Type{ENU}, e::Real, n::Real) = ENU_NULL(e,n,0.0)                              # idk
+call(::Type{ENU}, e::Real, n::Real, u::Real) = ENU_NULL(e,n,u)                      # allow default constructuction with no reference position
 
 
 # to add in the template parameter when its omitted
@@ -203,7 +203,7 @@ add_param{T}(::Type{ENU{T}}) = ENU{T}
 # TODO: wanted?
 #immutable NED <: LocalPosition
 #    north::Float64
-#	 east::Float64
+#     east::Float64
 #    down::Float64
 #end
 #NED(x, y) = NED(x, y, 0.0)

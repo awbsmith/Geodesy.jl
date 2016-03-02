@@ -28,10 +28,10 @@ end
 # TODO: overload with other ellipses as needed
 function utm_srid(lla::Union{LLA{WGS84}, LL{WGS84}})
 
-	# get the band and zone
-	(zone, band) = utm_zone(lla)
-	auth = :EPSG
-	code = 32600 + (band > 0 ? 0 : 100) + zone
+    # get the band and zone
+    (zone, band) = utm_zone(lla)
+    auth = :EPSG
+    code = 32600 + (band > 0 ? 0 : 100) + zone
     return SRID{auth, code}
 end
 

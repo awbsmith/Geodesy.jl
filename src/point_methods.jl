@@ -17,10 +17,10 @@ LL_fam = Union{LLA, LL}
 Proj4_fam = Union{WorldPosition, CRS}           # acceptable types to give to Proj4
 
 Vec3_fam = Union{WorldPosition, LocalPosition}  # for three element point types
-Vec2_fam = Union{LL}  							# for three element point types
+Vec2_fam = Union{LL}                              # for three element point types
 
-ELL_param_fam = Union{LLA, LL, ECEF}  			# things where an ellipse / psuedo datum are the template param
-LL_param_fam = Union{ENU}            			# things where an LLA points is the template param
+ELL_param_fam = Union{LLA, LL, ECEF}              # things where an ellipse / psuedo datum are the template param
+LL_param_fam = Union{ENU}                        # things where an LLA points is the template param
 
 
 #########################################
@@ -120,16 +120,16 @@ geotransform{T}(::Type{LLA}, ll::LL{T}) = LLA{T}(lla.lon, lla.lat, 0.0)
 
 # No conversions, stripping or adding the template parameters
 macro default_convs(type_name, known_subtype, null_subtype)
-	eval(quote
+    eval(quote
 
-		# geotransform it to itself (i.e. do nothing)
-		geotransform{T}(::Type{$(type_name){T}}, X::$(type_name){T}) = X
+        # geotransform it to itself (i.e. do nothing)
+        geotransform{T}(::Type{$(type_name){T}}, X::$(type_name){T}) = X
 
-		# allow stripping the template parameter from the template
-		geotransform{T <: $(known_subtype)}(::Type{$(type_name){$(null_subtype)}}, X::$(type_name){T}) = $(type_name){$(null_subtype)}(X...)
+        # allow stripping the template parameter from the template
+        geotransform{T <: $(known_subtype)}(::Type{$(type_name){$(null_subtype)}}, X::$(type_name){T}) = $(type_name){$(null_subtype)}(X...)
 
-		# allow inserting a template parameter into the template
-		geotransform{T <: $(known_subtype)}(::Type{$(type_name){T}}, X::$(type_name){$(null_subtype)}) = $(type_name){T}(X...)
+        # allow inserting a template parameter into the template
+        geotransform{T <: $(known_subtype)}(::Type{$(type_name){T}}, X::$(type_name){$(null_subtype)}) = $(type_name){T}(X...)
 
     end)
 end
@@ -142,21 +142,21 @@ end
 
 # dont macro srid type's, we don't want to allow stripping of the SRID 
 geotransform{T <: SRID}(::Type{CRS}, X::CRS{T}) = X  
-geotransform{T <: SRID}(::Type{CRS{T}}, X::CRS{T}) = X		   	
+geotransform{T <: SRID}(::Type{CRS{T}}, X::CRS{T}) = X               
 
 
 #
 # templates for constructing one point type from another (I want to leave convert free to do value preserving conversions)
 #
 macro add_cross_const(Type1, Type2)
-	eval(quote
+    eval(quote
 
-		# copy constructor for the first one
-		call{T <: $(Type1), U <: $(Type1)}(::Type{T}, X::U) = geotransform(T, X)
+        # copy constructor for the first one
+        call{T <: $(Type1), U <: $(Type1)}(::Type{T}, X::U) = geotransform(T, X)
 
-		# and the cross versions
-		call{T <: $(Type1), U <: $(Type2)}(::Type{T}, X::U) = geotransform(T, X)
-		call{T <: $(Type2), U <: $(Type1)}(::Type{T}, X::U) = geotransform(T, X)
+        # and the cross versions
+        call{T <: $(Type1), U <: $(Type2)}(::Type{T}, X::U) = geotransform(T, X)
+        call{T <: $(Type2), U <: $(Type1)}(::Type{T}, X::U) = geotransform(T, X)
     end)
 end
 @add_cross_const(WorldPosition, LocalPosition)
@@ -175,19 +175,19 @@ call{T <: World_fam}(::Type{T}, X::Local_fam, ll_ref::LL_fam) = geotransform(T, 
 # allow construction from a matrix via convert as its value preserving
 #
 function convert{T <: Geodesy_fam}(::Type{Vector{T}}, X::AbstractMatrix; row::Bool=true)
-	oT = add_param(T)
-	n = (row) ? size(X,1) : size(X,2)
-	Xout = Vector{oT}(n)  # cant make list comprehesion get the output type right
-	if (T <: Vec2_fam) && row 
-		for i = 1:n; Xout[i] = oT(X[i,1], X[i,2]); end
-	elseif (row)
-		for i = 1:n; Xout[i] = oT(X[i,1], X[i,2], X[i,3]); end
-	elseif (T <: Vec2_fam)
-		for i = 1:n; Xout[i] = oT(X[1,i], X[2,i]); end
-	else
-		for i = 1:n; Xout[i] = oT(X[1,i], X[2,i], X[3,i]); end
-	end
-	return Xout
+    oT = add_param(T)
+    n = (row) ? size(X,1) : size(X,2)
+    Xout = Vector{oT}(n)  # cant make list comprehesion get the output type right
+    if (T <: Vec2_fam) && row 
+        for i = 1:n; Xout[i] = oT(X[i,1], X[i,2]); end
+    elseif (row)
+        for i = 1:n; Xout[i] = oT(X[i,1], X[i,2], X[i,3]); end
+    elseif (T <: Vec2_fam)
+        for i = 1:n; Xout[i] = oT(X[1,i], X[2,i]); end
+    else
+        for i = 1:n; Xout[i] = oT(X[1,i], X[2,i], X[3,i]); end
+    end
+    return Xout
 end
 
 
@@ -199,10 +199,10 @@ end
 ###################################################################
 
 # we want to make sure any created Vector have the template parameter in them
-# add_param{T <: ELL_param_fam, U <: ELL_param_fam}(::Type{T}, ::Type{U}) = T ==  add_param(T) ? T : T{U.parameters[1]}  							# not type safe :-(
+# add_param{T <: ELL_param_fam, U <: ELL_param_fam}(::Type{T}, ::Type{U}) = T ==  add_param(T) ? T : T{U.parameters[1]}                              # not type safe :-(
 @generated add_param{T <: ELL_param_fam, U <: ELL_param_fam}(::Type{T}, ::Type{U}) = (T == add_param(T)) ? :(T) : :(T{$(ELL_type(U))})
 
-# add_param{T <: ELL_param_fam, U <: LL_param_fam}(::Type{T}, ::Type{U}) = T ==  add_param(T) ? T : T{typeof(U.parameters[1]).parameters[1]}		# not type safe :-(
+# add_param{T <: ELL_param_fam, U <: LL_param_fam}(::Type{T}, ::Type{U}) = T ==  add_param(T) ? T : T{typeof(U.parameters[1]).parameters[1]}        # not type safe :-(
 @generated add_param{T <: ELL_param_fam, U <: LL_param_fam}(::Type{T}, ::Type{U}) = T ==  add_param(T) ? :(T) : :(T{$(typeof(U.parameters[1]).parameters[1])})
 
 # default to not include reference position in local types
@@ -221,61 +221,61 @@ add_param{T <: LL_param_fam, U <: Geodesy_fam}(::Type{T}, ::Type{U}) = add_param
 # a vectorized way to perform transformations
 function geotransform{T <: Geodesy_fam, U <: Geodesy_fam}(::Type{T}, X::Vector{U})
 
-	# make sure the output parameter is filled
-	oT =  add_param(T, U)
+    # make sure the output parameter is filled
+    oT =  add_param(T, U)
 
-	# is Proj4 involved?
-	if (T <: CRS) || (U <: CRS)
-		Xout = proj4_vectorized(oT, X)
-	else
-		Xout = Vector{oT}(length(X))
-		@inbounds for i = 1:length(X)
-			Xout[i] = geotransform(oT, X[i])
-		end
-	end
-	return Xout
+    # is Proj4 involved?
+    if (T <: CRS) || (U <: CRS)
+        Xout = proj4_vectorized(oT, X)
+    else
+        Xout = Vector{oT}(length(X))
+        @inbounds for i = 1:length(X)
+            Xout[i] = geotransform(oT, X[i])
+        end
+    end
+    return Xout
 end
 
 
 # a vectorized way to perform transformations with reference points
 function geotransform{T <: Geodesy_fam, U <: Geodesy_fam, V <: LL_fam}(::Type{T}, X::Vector{U}, ll_ref::V)
 
-	# get inputs and desired output types
-	oT = add_param(T, V)
+    # get inputs and desired output types
+    oT = add_param(T, V)
 
-	Xout = Vector{oT}(length(X))
-	@inbounds for i = 1:length(X)
-		Xout[i] = geotransform(oT, X[i], ll_ref)
-	end
-	return Xout
+    Xout = Vector{oT}(length(X))
+    @inbounds for i = 1:length(X)
+        Xout[i] = geotransform(oT, X[i], ll_ref)
+    end
+    return Xout
 end
 
 
 # worker code for proj4 vectorization (looping prj4 is slow)
 function proj4_vectorized{T <: Proj4_fam, U <: Proj4_fam}(::Type{T}, X::Vector{U})
 
-	if !((T <: CRS) || (U <: CRS))
-		warn("Unexpected: using Proj4 to geotransform between Geodesy point types.  How'd this happen")
-	end
+    if !((T <: CRS) || (U <: CRS))
+        warn("Unexpected: using Proj4 to geotransform between Geodesy point types.  How'd this happen")
+    end
 
-	# convert to a matrix 
-	mat = Matrix{Float64}(length(X), 3)
-	@inbounds for i = 1:length(X)
-		mat[i, 1] = X[i][1]
-		mat[i, 2] = X[i][2]
-		mat[i, 3] = U <: Vec2_fam ? 0.0 : X[i][3]
-	end
+    # convert to a matrix 
+    mat = Matrix{Float64}(length(X), 3)
+    @inbounds for i = 1:length(X)
+        mat[i, 1] = X[i][1]
+        mat[i, 2] = X[i][2]
+        mat[i, 3] = U <: Vec2_fam ? 0.0 : X[i][3]
+    end
 
-	# perform it
-	Proj4.transform!(Geodesy.get_projection(U), Geodesy.get_projection(T), mat, false)
+    # perform it
+    Proj4.transform!(Geodesy.get_projection(U), Geodesy.get_projection(T), mat, false)
 
-	# and assign the output
-	X = Vector{T}(length(X))
-	@inbounds for i = 1:length(X)
-		X[i] = T(mat[i,1], mat[i,2], mat[i,3])
-	end
-	
-	return X
+    # and assign the output
+    X = Vector{T}(length(X))
+    @inbounds for i = 1:length(X)
+        X[i] = T(mat[i,1], mat[i,2], mat[i,3])
+    end
+    
+    return X
 end
 
 

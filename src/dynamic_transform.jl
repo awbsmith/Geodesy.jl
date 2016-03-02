@@ -1,8 +1,10 @@
 ### transformations for dynamic datums.  Can Proj4 do this?
+
+#=TODO: make this
 function convert{T,Y}(::Type{StaticLLA{GDA94}}, X::StaticLLA{T, Y})
 
 
-// ITRF transformation parameters from
+    // ITRF transformation parameters from
     // J. Dawson and A. Woods, "ITRF to GDA94 coordinate transforms",
     // Journal of Applied Geodesy, 4, p. 189 (2010):
     //
@@ -17,7 +19,7 @@ function convert{T,Y}(::Type{StaticLLA{GDA94}}, X::StaticLLA{T, Y})
     // where ppb = parts per billion; mas = milli arc seconds; yr = year
     //
 
-	const double* params = 0;
+    const double* params = 0;
     const double* rates = 0;
     const double itrf2008_params[7] = {-84.68, -19.42, 32.01, 9.710, -0.4254, 2.2578, 2.4015};
     const double itrf2008_rates [7] = {1.42, 1.34, 0.90, 0.109, 1.5461, 1.1820, 1.1551};
@@ -62,3 +64,5 @@ function convert{T,Y}(::Type{StaticLLA{GDA94}}, X::StaticLLA{T, Y})
     LOG_DEBUG("%s -> %s tansformation parameters: "
               "T = (%.5f %.5f %.5f), Sc = %.5e, R = (%.5e, %.5e, %.5e)",
               inputDatum, outputDatum, m_Tx, m_Ty, m_Tz, m_Sc, m_Rx, m_Ry, m_Rz);
+
+=#

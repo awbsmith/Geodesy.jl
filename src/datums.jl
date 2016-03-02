@@ -86,15 +86,15 @@ geoid_file(::Type{AusGeoid09}) = "ausgeoid09.pgm"
 
 # function to get a list of all datums
 function get_datums(datum::DataType=AbstractDatum, super::ASCIIString="", out=Vector{ASCIIString}(0))
-	sub_datums = subtypes(datum)
-	if (length(sub_datums) > 0)
-		for sd in sub_datums
-			out = get_datums(sd, datum==AbstractDatum ? "" : " (" * string(datum) * ")", out)
-		end
-	else
-		push!(out, replace(string(datum) *  super  , "Geodesy.", ""))
-	end
-	return out
+    sub_datums = subtypes(datum)
+    if (length(sub_datums) > 0)
+        for sd in sub_datums
+            out = get_datums(sd, datum==AbstractDatum ? "" : " (" * string(datum) * ")", out)
+        end
+    else
+        push!(out, replace(string(datum) *  super  , "Geodesy.", ""))
+    end
+    return out
 end
 
 
@@ -102,23 +102,23 @@ end
 # dev tool, find stuff in the Proj4 dicts
 # e.g find_match(Proj4.epsg, [r"proj=longlat", r"datum=WGS84"])
 function find_match{T,U}(p4_dict::Dict{T,U}, exprs)
-	
-	if !isa(exprs, Vector)
-		exprs = [exprs]
-	end
+    
+    if !isa(exprs, Vector)
+        exprs = [exprs]
+    end
 
-	matched_key = Vector{T}(0)
-	matched_str = Vector{U}(0)
-	for key in keys(p4_dict)
-		str = p4_dict[key]
-		hasmatch = true	
-		for expr in exprs
-			hasmatch &= length(matchall(expr, str)) > 0
-		end
-		if hasmatch
-			push!(matched_key, key)
-			push!(matched_str, str)
-		end
-	end
-	return [matched_key   matched_str]
+    matched_key = Vector{T}(0)
+    matched_str = Vector{U}(0)
+    for key in keys(p4_dict)
+        str = p4_dict[key]
+        hasmatch = true    
+        for expr in exprs
+            hasmatch &= length(matchall(expr, str)) > 0
+        end
+        if hasmatch
+            push!(matched_key, key)
+            push!(matched_str, str)
+        end
+    end
+    return [matched_key   matched_str]
 end

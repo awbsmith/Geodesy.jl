@@ -8,36 +8,36 @@
 
 
 function geotransform{T <: SRID, U <: SRID}(::Type{T}, X::CRS{U}) 
-	Y = Proj4.transform(get_projection(U), get_projection(T), Vector(X))
-	out = CRS{T}(Y[1], Y[2], Y[3])
+    Y = Proj4.transform(get_projection(U), get_projection(T), Vector(X))
+    out = CRS{T}(Y[1], Y[2], Y[3])
 end
 geotransform{T <: SRID, U <: SRID}(::Type{CRS{T}}, X::CRS{U}) = geotransform(T, X)
 
 
 # X -> SRID
 function geotransform{T <: SRID, U <: Proj4_fam}(::Type{T}, X::U)
-	iU = add_param(U)
-	if T == SRID(iU)
-		out = CRS{T}(X[1], X[2], X[3])  # not actually a geotransform.  Should probably be a convert method?
-	else
-		Y = Proj4.transform(get_projection(iU), get_projection(T), [X[1], X[2], X[3]], false)	
-		out = CRS{T}(Y[1], Y[2], Y[3])
-	end
-	return out
+    iU = add_param(U)
+    if T == SRID(iU)
+        out = CRS{T}(X[1], X[2], X[3])  # not actually a geotransform.  Should probably be a convert method?
+    else
+        Y = Proj4.transform(get_projection(iU), get_projection(T), [X[1], X[2], X[3]], false)    
+        out = CRS{T}(Y[1], Y[2], Y[3])
+    end
+    return out
 end
 geotransform{T <: SRID}(::Type{CRS{T}}, X::Union{ECEF, LLA}) = Proj4.transform(T, X)      # but this version is the same syntax as the reverse of the geotransform
 
 
 # SRID -> X
 function geotransform{T <: Proj4_fam, U <: SRID}(::Type{T}, X::CRS{U})
-	iT = add_param(T)
-	if SRID(iT) == U
-		out = iT(X[1], X[2], X[3])  # not actually a geotransform.  Should probably be a convert method?
-	else
-		Y = Proj4.transform(get_projection(U), get_projection(iT), [X[1], X[2], X[3]], false)	
-		out = iT(Y[1], Y[2], Y[3])
-	end
-	return out
+    iT = add_param(T)
+    if SRID(iT) == U
+        out = iT(X[1], X[2], X[3])  # not actually a geotransform.  Should probably be a convert method?
+    else
+        Y = Proj4.transform(get_projection(U), get_projection(iT), [X[1], X[2], X[3]], false)    
+        out = iT(Y[1], Y[2], Y[3])
+    end
+    return out
 end
 
 
@@ -90,8 +90,8 @@ function ecef_to_lla{T <: LLA, U <: AbstractDatum}(::Type{T}, ecef::ECEF{U}, d::
     N = d.a / sqrt(1 - d.e² * sin(ϕ)^2)  # Radius of curvature (meters)
     h = p / cos(ϕ) - N
 
-	lla = T(rad2deg(λ), rad2deg(ϕ), h)
-	
+    lla = T(rad2deg(λ), rad2deg(ϕ), h)
+    
     return lla
 end
 
@@ -116,13 +116,13 @@ geotransform{T <: AbstractDatum}(::Type{LL}, ecef::ECEF{T}) = geotransform(LL{T}
 # TESTING - compare accuracy of this method to ecef_to_lla using Geographic lib as a ground truth
 function ecef_to_lla_test{T}(::Type{LLA{T}}, ecef::ECEF{T})
 
-	d = ellipsoid(T)
+    d = ellipsoid(T)
 
-	# termination tolerances for convergence
+    # termination tolerances for convergence
     hTol = 1e-6
     latTol = hTol / d.a
 
-	# go back into Geodetic via iterative method
+    # go back into Geodetic via iterative method
     X, Y, Z = ecef.x, ecef.y, ecef.z
     lon = atan2(Y, X)
     R = sqrt(X*X + Y*Y)
@@ -130,8 +130,8 @@ function ecef_to_lla_test{T}(::Type{LLA{T}}, ecef::ECEF{T})
     # initialisation for iterative lat and h solution
     h = 0.0
     lat = atan2(Z,(1.0 - d.e²) * R)
-	
-	converged = false
+    
+    converged = false
     maxIter = 10
     i=1
     while (!converged) && (i <= maxIter)
@@ -143,8 +143,8 @@ function ecef_to_lla_test{T}(::Type{LLA{T}}, ecef::ECEF{T})
         h = hNew
         i=i+1
     end
-	
-	return LLA_WGS84(rad2deg(lon), rad2deg(lat), h)
+    
+    return LLA_WGS84(rad2deg(lon), rad2deg(lat), h)
 
 end
 
@@ -203,24 +203,24 @@ X_enu = ENU(R * Vec(X_ecef) + t)  # using FixedSizeArrays
  
 """
 function geotransform_params{T}(::Type{ENU}, ll_ref::Union{LLA{T}, LL{T}})
-	
-	ϕdeg, λdeg = ll_ref.lat, ll_ref.lon
+    
+    ϕdeg, λdeg = ll_ref.lat, ll_ref.lon
 
-	# Compute rotation matrix
+    # Compute rotation matrix
     sinλ, cosλ = sind(λdeg), cosd(λdeg)
     sinϕ, cosϕ = sind(ϕdeg), cosd(ϕdeg)
 
-	# Reference
-	ecef_ref = ECEF{T}(ll_ref)
+    # Reference
+    ecef_ref = ECEF{T}(ll_ref)
 
-	R = @fsa([-sinλ        cosλ        0.0;
-			  -cosλ*sinϕ   -sinλ*sinϕ    cosϕ;
-			   cosλ*cosϕ    sinλ*cosϕ    sinϕ])
+    R = @fsa([-sinλ        cosλ        0.0;
+              -cosλ*sinϕ   -sinλ*sinϕ    cosϕ;
+               cosλ*cosϕ    sinλ*cosϕ    sinϕ])
 
-	t = -R * Vec(ecef_ref.x, ecef_ref.y, ecef_ref.z)
+    t = -R * Vec(ecef_ref.x, ecef_ref.y, ecef_ref.z)
 
-	return (R, t)
-	
+    return (R, t)
+    
 end
 geotransform_params{T <: ENU}(::Type{T}) = geotransform_params(ENU, LL_ref(T))
 
@@ -245,7 +245,7 @@ geotransform{T}(::Type{ECEF_NULL}, enu::ENU, ll_ref::Union{LLA{T}, LL{T}}) = enu
 # convert to ECEF when no LLA reference point is included in the template for the ENU input
 function enu_to_ecef{T <: ECEF, U}(::Type{T}, enu::ENU, ll_ref::Union{LL{U}, LLA{U}})
     
-	ϕdeg, λdeg = ll_ref.lat, ll_ref.lon
+    ϕdeg, λdeg = ll_ref.lat, ll_ref.lon
 
     ecef_ref = geotransform(ECEF{U}, ll_ref)
 
@@ -287,24 +287,24 @@ X_ecef = ECEF(R * Vec(X_enu) + t)  # using FixedSizeArrays
  
 """
 function geotransform_params{T, U <: Union{LLA, LL}}(::Type{ECEF{T}}, ll_ref::U)
-	
-	ϕdeg, λdeg = ll_ref.lat, ll_ref.lon
+    
+    ϕdeg, λdeg = ll_ref.lat, ll_ref.lon
 
-	# Compute rotation matrix
+    # Compute rotation matrix
     sinλ, cosλ = sind(λdeg), cosd(λdeg)
     sinϕ, cosϕ = sind(ϕdeg), cosd(ϕdeg)
 
-	# Reference
-	ecef_ref = ECEF{T}(ll_ref)
+    # Reference
+    ecef_ref = ECEF{T}(ll_ref)
 
-	R = @fsa([-sinλ  -cosλ*sinϕ    cosλ*cosϕ;
-			   cosλ  -sinλ*sinϕ    sinλ*cosϕ;
-			   0.0    cosϕ            sinϕ])
+    R = @fsa([-sinλ  -cosλ*sinϕ    cosλ*cosϕ;
+               cosλ  -sinλ*sinϕ    sinλ*cosϕ;
+               0.0    cosϕ            sinϕ])
 
-	t = Vec(ecef_ref.x, ecef_ref.y, ecef_ref.z)
+    t = Vec(ecef_ref.x, ecef_ref.y, ecef_ref.z)
 
-	return (R, t)
-	
+    return (R, t)
+    
 end
 geotransform_params{T}(::Type{ECEF}, ll_ref::Union{LLA{T}, LL{T}}) = geotransform_params(ECEF{T}, ll_ref)
 

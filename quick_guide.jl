@@ -10,10 +10,10 @@
 
 # Starting with points in a coordinate system defined by an SRID (https://en.wikipedia.org/wiki/SRID)
 raw_data = [
-  573105.43200000003	6086900.3839999996	277.42700000000002	"EPSG"  32755;
-  572734.61300000001	6087631.648	        273.80000000000001	"EPSG"  32755;
-  572688.821	        6086535.8650000002	267.334	            "EPSG"  32755;
-  573667.63899999997	6086370.341			287.68799999999999	"EPSG"  32755
+        573105.43200000003    6086900.3839999996    277.42700000000002    "EPSG"    32755;
+        572734.61300000001    6087631.6480000000    273.80000000000001    "EPSG"    32755;
+        572688.82100000000    6086535.8650000002    267.334               "EPSG"    32755;
+        573667.63899999997    6086370.3410000000    287.68799999999999    "EPSG"    32755
 ]
 
 # build an srid type from the info in the raw data
@@ -37,7 +37,7 @@ Xin = convert(Vector{Utm55S}, raw_data[:, 1:3]; row=true) # = convert(Vector{CRS
 #
 # N.B.  The below step requires Geodesy to recognise the Proj4 projection for type LLA{WGS84}.  If you're using a point type
 # that geodesy doesn't know the Proj4 projection for, overload Geodesy.get_projection() to return the appropriate Proj4 projection e.g.:
-#	Geodesy.get_projection(::Type{LLA{WGS84}}) = Proj4.Projection("+proj=longlat +datum=WGS84 +no_defs")
+#    Geodesy.get_projection(::Type{LLA{WGS84}}) = Proj4.Projection("+proj=longlat +datum=WGS84 +no_defs")
 #
 
 Xwgs84 = geotransform(LLA{WGS84}, Xin)
@@ -71,8 +71,8 @@ println(typeof(Xlocal_b))
 #
 
 for pair in combinations(1:length(Xlocal_a), 2)
-	push!(Xlocal_a, (Xlocal_a[pair[1]] + Xlocal_a[pair[2]]) / 2.0)
-	push!(Xlocal_b, (Xlocal_b[pair[1]] + Xlocal_b[pair[2]]) / 2.0)
+    push!(Xlocal_a, (Xlocal_a[pair[1]] + Xlocal_a[pair[2]]) / 2.0)
+    push!(Xlocal_b, (Xlocal_b[pair[1]] + Xlocal_b[pair[2]]) / 2.0)
 end
 
 
@@ -103,20 +103,20 @@ srid_out = Geodesy.utm_srid(lla_ref)     # Geodesy can only do this for the WGS8
 
 # whether ECEF is truly an ECEF point depends on the datum
 # e.g.: 
-lla_osgb36 = LLA{Geodesy.OSGB36}(0, 0, 0)  		# OSGB36 is a good match to the Earth in the UK but not elsewhere
-ecef_fake = geotransform(ECEF, lla_osgb36) 		# = 6.377563396e6, 0.0, 0.0
+lla_osgb36 = LLA{Geodesy.OSGB36}(0, 0, 0)          # OSGB36 is a good match to the Earth in the UK but not elsewhere
+ecef_fake = geotransform(ECEF, lla_osgb36)         # = 6.377563396e6, 0.0, 0.0
 # isn't a true ECEF point because the OSGB36 ellipsoid isn't geocentric.
 
 
 # If in doubt, datum conversions can be using the CRS type to get Proj4 to do it, e.g. 
-ecef_srid = geotransform(SRID(ECEF{WGS84}), lla_osgb36) 	# = 6.377879171552554e6,-99.12039106890559, 534.423089412207
-ecef_wgs84 = convert(ECEF{WGS84}, ecef_srid)         	# convert to a type native to this package (type conversion not a transformation)
+ecef_srid = geotransform(SRID(ECEF{WGS84}), lla_osgb36)     # = 6.377879171552554e6,-99.12039106890559, 534.423089412207
+ecef_wgs84 = convert(ECEF{WGS84}, ecef_srid)             # convert to a type native to this package (type conversion not a transformation)
 
 # or equivilently
 srid = SRID(lla_odgb36)
-lla_srid = convert(CRS{srid}, lla_osgb36)       	# type conversion not a transformation
-ecef_wgs84_2 = geotransform(ECEF{WGS84}, lla_srid)			# = 6.377879171552554e6,-99.12039106890559, 534.423089412207
-		
+lla_srid = convert(CRS{srid}, lla_osgb36)           # type conversion not a transformation
+ecef_wgs84_2 = geotransform(ECEF{WGS84}, lla_srid)            # = 6.377879171552554e6,-99.12039106890559, 534.423089412207
+        
 
 # geotransform(WGS84, 
 
