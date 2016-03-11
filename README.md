@@ -7,8 +7,10 @@ The Geodesy package implements geodetic transformations bewteen various coordina
 
 ### Terminology
 
-![Coordinate Reference systems](http://www.crs-geo.eu/SharedDocs/Bilder/CRS/schema-crs-datum-cs,property=default.gif) ![](http://i.stack.imgur.com/aeS8k.png)
-[www.crs-geo.eu](http://www.crs-geo.eu/nn_124224/crseu/EN/CRS__Overview/definition-crs__node.html)
+![Coordinate Reference systems](http://www.crs-geo.eu/SharedDocs/Bilder/CRS/schema-crs-datum-cs,property=default.gif) 
+[www.crs-geo.eu](http://www.crs-geo.eu/nn_124224/crseu/EN/CRS__Overview/definition-crs__node.html). 
+
+[View the above as a data structure]((http://i.stack.imgur.com/aeS8k.png))
 
 The above images gives a quick picture of the components of the coordinate reference systems used in geodesy, with the image on the right showing the data structure used by the EPSG authority as taken from the [EPSG website](http://www.epsg-registry.org/).
 
