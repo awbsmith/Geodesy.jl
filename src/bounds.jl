@@ -5,7 +5,7 @@ import Base.getindex, Base.setindex!, Base.*
 ### Bounds Type ###
 ###################
 
-type Bounds{T <: Geodesy_fam} 
+type Bounds{T} 
     min_x::Float64
     max_x::Float64
     min_y::Float64
@@ -31,13 +31,13 @@ Base.setindex!{T}(bbox::Bounds{T}, val::Real, idx::Int) = setfield!(bbox, idx, F
 ### Calculate LL bounds   ###
 #############################
 
-function call{T <: LL_fam}(::Type{Bounds{T}}, X::Vector{T}, degs::Bool=true)
+function call{T <: Union{LL, LLA}}(::Type{Bounds{T}}, X::Vector{T})
 
     # build both paths around the circle to the first two points
-    bounds_hyps = init_hyps(X, degs)
+    bounds_hyps = init_hyps(X, true)
 
     # and convert both hypotheses
-    pick_hyp(bounds_hyps, degs)
+    pick_hyp(bounds_hyps, true)
 
 end
 
@@ -45,7 +45,7 @@ end
 ### Calculate other bounds   ###
 ################################
 
-function call{T <: Geodesy_fam}(::Type{Bounds{T}}, X::Vector{T}, degs::Bool=true)
+function call{T}(::Type{Bounds{T}}, X::Vector{T})
 
     max_x = max_y = -Inf
     min_x = min_y = Inf
@@ -57,7 +57,9 @@ function call{T <: Geodesy_fam}(::Type{Bounds{T}}, X::Vector{T}, degs::Bool=true
 end
 
 # unspecified type
-call{T <: Geodesy_fam}(::Type{Bounds}, X::Vector{T}, degs::Bool=true) = Bounds{T}(X, degs)
+call{T}(::Type{Bounds}, X::Vector{T}) = Bounds{T}(X)
+
+
 
 
 ################################
@@ -69,9 +71,9 @@ call{T <: Geodesy_fam}(::Type{Bounds}, X::Vector{T}, degs::Bool=true) = Bounds{T
 # by the input bounds
 
 # renamed it because it constructs a Bounds type not a ENU Type.  Does it belong as a transform?
-function call{T <: Geodesy_fam, U <: LL_fam}(::Type{Bounds{T}}, bounds::Bounds{U}, ll_ref::U = center(bounds))
+function call{T <: ENU, U <: Union{LL, LLA}, V <: Union{LL, LLA}}(::Type{Bounds{T}}, bounds::Bounds{U}, ll_ref::V = center(bounds))
 
-    oT = add_param(T)
+    oT = add_param(add_param(T, U), V)
 
     max_x = max_y = -Inf
     min_x = min_y = Inf
@@ -117,7 +119,7 @@ end
 
 
 ### Check whether a location is within bounds ###
-function inBounds{T <: Geodesy_fam}(loc::T, bounds::Bounds{T})
+function inBounds{T}(loc::T, bounds::Bounds{T})
     x, y = getX(loc), getY(loc)
 
     bounds.min_x <= x <= bounds.max_x &&
@@ -126,7 +128,7 @@ end
 
 
 # only for points that have passed the inBounds test
-function onBounds{T <: Union{LL, LLA, ENU}}(loc::T, bounds::Bounds{T})
+function onBounds{T}(loc::T, bounds::Bounds{T})
     x, y = getX(loc), getY(loc)
 
     x == bounds.min_x || x == bounds.max_x ||
@@ -135,7 +137,7 @@ end
 
 # only for points where inBounds(p1) != inBounds(p2)
 # TODO: return actual altitude rather than zero
-function boundaryPoint{T <: Geodesy_fam}(p1::T, p2::T, bounds::Bounds{T})
+function boundaryPoint{T}(p1::T, p2::T, bounds::Bounds{T})
     x1, y1 = getX(p1), getY(p1)
     x2, y2 = getX(p2), getY(p2)
 

@@ -4,14 +4,19 @@
 
 abstract AbstractDatum
 
+# start a get_datum function to retrieve the datum where possible
+get_datum{T <: AbstractDatum}(::Type{T}) = T
+
 #
 # Unknown
 #
 immutable UnknownDatum <: AbstractDatum end
+get_datum(::Type{AbstractDatum}) = UnknownDatum  # make the abstract datum return this
+
 
 # display ???'s for unkown ellipse for compactness
 ellipsoid(::Type{UnknownDatum}) = error("The ellipse is unknown")
-show(io::IO, ::Type{UnknownDatum}) = print(io, "???")
+# show(io::IO, ::Type{UnknownDatum}) = print(io, "???") # this is killing the code generation in type_methods.jl
 
 
 #
@@ -76,12 +81,12 @@ ref_date(::Type{NAD83}) = DateTime(1983)
 #
 abstract AbstractGeoid
 
+# dont know the Geoid
+immutable UnknownGeoid <: AbstractGeoid end
 
+# Australia
 immutable AusGeoid09 <: AbstractGeoid end
-geoid_file(::Type{AusGeoid09}) = "ausgeoid09.pgm"
-
-
-
+geoid_file(::Type{AusGeoid09}) = "ausgeoid09.gtx"
 
 
 # function to get a list of all datums

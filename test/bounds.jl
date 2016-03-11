@@ -1,6 +1,6 @@
 using Geodesy
 using Base.Test
-using Geodesy: onBounds, inBounds, boundaryPoint, NAD27
+using Geodesy: Bounds, onBounds, inBounds, boundaryPoint, NAD27, center
 
 # Construction
 

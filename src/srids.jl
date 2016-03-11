@@ -44,7 +44,6 @@ end
     # add the projection info
     const proj = Proj4.Projection(proj4_str(T))  # const is wishfull
     return :($proj)
-
 end
 
 

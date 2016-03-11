@@ -1,6 +1,26 @@
 using FixedSizeArrays  # to do maths on points
 
-#  TODO: work out why this module kills the convert methods table
+
+
+
+
+######################################################
+# Add types to facilitate dispatching
+# the transformation calculation to other functions
+######################################################
+
+
+# define an abstract type to control what package handles what
+abstract  AbstractPackageHandler
+
+immutable UnknownHandler <: AbstractPackageHandler; end     # ????
+immutable GeodesyHandler <: AbstractPackageHandler; end     # for point handled in this package
+immutable Proj4Handler   <: AbstractPackageHandler; end     # for point handled by the Proj4 package
+
+# and a function to return them
+get_handler(X) = get_handler(typeof(X))
+get_handler{T}(::Type{T}) = UnknownHandler
+
 
 ###############################
 # Build some sort of heirarchy
@@ -19,8 +39,14 @@ abstract  LocalPosition  <: FixedVectorNoTuple{3, Float64}
 # Heights relative to something... (basis for a compond coordinate reference system)
 abstract  WorldHeight <: Real
 
+# set up some helpers for the type methods
+has_ellipse{T}(::Type{T}) = Val{false}                               # set true if there's an ellipse in the parameterization
+has_refloc{T}(::Type{T})  = Val{false}                               # set true if there's an reference location in the parameterization
+has_srid{T}(::Type{T})    = Val{false}                               # set true if there's an srid in the parameterization
+has_geoid{T}(::Type{T})   = Val{false}                               # set true if there's a  geoid in the parameterization
 
-
+# and default parameters 
+default_params{T}(::Type{T}) = error("Default parameters not supplied for type $(T). Please overload Geodesy.default_params()")
 
 
 ########################
@@ -43,6 +69,12 @@ end
 # useful shortcuts
 typealias LLA_WGS84 LLA{WGS84}
 typealias LLA_NULL LLA{UnknownDatum}
+
+default_params{T <: LLA}(::Type{T}) = (UnknownDatum,)
+
+# trait style functions
+has_ellipse{T <: LLA}(::Type{T}) = Val{true}
+get_handler{T <: LLA}(::Type{T}) = GeodesyHandler
 
 
 
@@ -70,6 +102,12 @@ end
 typealias ECEF_WGS84 ECEF{WGS84}
 typealias ECEF_NULL ECEF{UnknownDatum}
 
+default_params{T <: ECEF}(::Type{T}) = (UnknownDatum,)
+
+# trait style functions
+has_ellipse{T <: ECEF}(::Type{T}) = Val{true}
+get_handler{T <: ECEF}(::Type{T}) = GeodesyHandler
+
 
 """
 Points with a full coordinate reference system as defined by an SRID identifier (converions will use Proj4)
@@ -77,22 +115,21 @@ Points with a full coordinate reference system as defined by an SRID identifier 
 Its up to the user to determine the what the x / y / z fields actually represent; which is governed by the element order in Proj4
 
 For a quick reference:
-    lat long style CRS's,  x -> lon, y -> lat (or getlat() and getlon())
-    utm style CRS's,  x -> false east, y -> false north, z -> up (or geteast() getnorth() getup())
+    lat long style CRS's,  x -> lon, y -> lat (or get_lat() and get_lon())
+    utm style CRS's,  x -> false east, y -> false north, z -> up (or get_east() get_north() get_up())
 """
 immutable CRS{T <: SRID} <: WorldPosition
-       x::Float64
+    x::Float64
     y::Float64
     z::Float64
 end
 
+default_params{T <: CRS}(::Type{T}) = (:(error("Always specify an SRID when using the CRS position type")),) 
 
-# Don't allow unkown SRIDS
-Base.call(::Type{CRS}, x::Real, y::Real, z::Real) = error("Must specify an SRID")
+# trait style functions
+has_srid{T <: CRS}(::Type{T}) = Val{true}
+get_handler{T <: CRS}(::Type{T}) = Proj4Handler
 
-# convenience for getting the srid from an SRID point
-SRID{T}(X::CRS{T}) = T
-SRID{T}(::Type{CRS{T}}) = T
 
 
 
@@ -121,6 +158,13 @@ end
 typealias LL_WGS84 LL{WGS84}
 typealias LL_NULL LL{UnknownDatum}
 
+default_params{T <: LL}(::Type{T}) = (UnknownDatum,)
+
+# trait style functions
+has_ellipse{T <: LL}(::Type{T}) = Val{true}
+get_handler{T <: LL}(::Type{T}) = GeodesyHandler
+
+
 
 
 
@@ -129,14 +173,22 @@ typealias LL_NULL LL{UnknownDatum}
 ##########################
 
 # TODO something with this
-immutable EllipHeight{T <: Ellipsoid} <: WorldHeight
+immutable EllipHeight{T <: AbstractDatum} <: WorldHeight
     h::Float64
 end
+has_ellipse{T <: EllipHeight}(::Type{T}) = Val{true}  # trait style functions
+default_params{T <: EllipHeight}(::Type{T}) = (UnknownDatum,)
 
 # TODO: custom geoid heights
 immutable GeoidHeight{T <: AbstractGeoid} <: WorldHeight
     h::Float64
 end
+
+default_params{T <: GeoidHeight}(::Type{T}) = (:(error("Always specify a geoid when using the GeoidHeight type")),) 
+
+has_geoid{T <: GeoidHeight}(::Type{T}) = Val{true}  # trait style functions
+get_handler{T <: GeoidHeight}(::Type{T}) = Proj4Handler
+
 
 
 
@@ -152,13 +204,23 @@ abstract AbstractCCRS{T, U} <: WorldPosition
 
 # use the SRID style because we need to Proj4 to handle the Geoid anyway
 """
-Compound coordinate reference system where the height is geoidal
+Compound coordinate reference system where the height is relative to a geoid
 """
-immutable CCRS_Geoid{T <: SRID, U <: AbstractGeoid} <: AbstractCCRS{T, U}
+immutable CCRS_Geoidal{T <: SRID, U <: AbstractGeoid} <: AbstractCCRS{T, U}
     x::Float64
     y::Float64
     z::Float64
+    #z::GeoidHeight{U}
 end
+
+default_params{T <: CCRS_Geoidal}(::Type{T}) = (:(error("Always specify the SRID when using the CCRS_Geoidal position type")), 
+                                               :(error("Always specify a geoid when using the CCRS_Geoidal position type")))   
+
+# trait style functions
+has_srid{T <: CCRS_Geoidal}(::Type{T}) = Val{true}
+has_geoid{T <: CCRS_Geoidal}(::Type{T}) = Val{true}
+get_handler{T <: CCRS_Geoidal}(::Type{T}) = GeodesyHandler
+
 
 
 
@@ -171,31 +233,35 @@ end
 Unknown reference (allow for ENU points with no LLA reference included in their template)
 """
 immutable UnknownRef <: WorldPosition end  # when we don't want to embed the reference frame in out Local coordinates
-show(io::IO, ::Type{UnknownRef}) = print(io, "???")
+# show(io::IO, ::Type{UnknownRef}) = print(io, "???") # this is killing the code generation in type_methods.jl
+
+# we're not code code gening methods for this type, so add this manually
+get_datum(::Type{UnknownRef}) = UnknownDatum          
 
 
 ### Point in East-North-Up (ENU) coordinates
 # Local cartesian coordinate system
 # Linearized about a reference point
 """
-East North Up point.  East and North lie in the reference ellipse's tangent plane at the reference point
+ENU{T}: East North Up point.  East and North lie in the reference ellipse's tangent plane at the reference point
 
 Use ENU_NULL(e,n,u) if you don't want to encode the reference point in the type
+
+# The template parameter should be a point in LL (ideally) or LLA, or an UnknownRef datatype
 """
-immutable ENU{T} <: LocalPosition   # T should be either UnknownRef or an LL position
+immutable ENU{T} <: LocalPosition   
     east::Float64
     north::Float64
     up::Float64
 end
 
 typealias ENU_NULL ENU{UnknownRef}
-call(::Type{ENU}, e::Real, n::Real) = ENU_NULL(e,n,0.0)                              # idk
-call(::Type{ENU}, e::Real, n::Real, u::Real) = ENU_NULL(e,n,u)                      # allow default constructuction with no reference position
 
+default_params{T <: ENU}(::Type{T}) = (UnknownRef, )
 
-# to add in the template parameter when its omitted
-add_param(::Type{ENU}) = ENU_NULL
-add_param{T}(::Type{ENU{T}}) = ENU{T}
+has_ellipse{T <: ENU}(::Type{T}) = Val{true}
+has_refloc{T <: ENU}(::Type{T}) = Val{true}
+get_handler{T <: ENU}(::Type{T}) = GeodesyHandler
 
 
 #ENU(x, y) = ENU(x, y, 0.0)
@@ -208,9 +274,6 @@ add_param{T}(::Type{ENU{T}}) = ENU{T}
 #end
 #NED(x, y) = NED(x, y, 0.0)
 
-
-# retrieve datums and ellipsoids
-ellipsoid{T <: AbstractDatum}(::Union{LLA{T}, LL{T}, ECEF{T}}) = ellipsoid(T)           # reference ellipsoid for the position
 
 
 

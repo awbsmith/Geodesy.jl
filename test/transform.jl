@@ -1,5 +1,5 @@
 using Geodesy
-using Geodesy: NAD27, OSGB36
+using Geodesy: NAD27, OSGB36, Bounds, center, distance
 using Base.Test
 using Compat
 using FixedSizeArrays
@@ -85,6 +85,12 @@ ecef = ECEF_WGS84(1529073.1560519305, -4465040.019013103, 4275835.339260309)
 enu = ENU(-343.493749083977, 478.764855466788, -0.027242885224325164)
 @xyz_approx_eq_eps ENU(lla, lla_ref) enu 1e-8
 @xyz_approx_eq_eps ENU{lla_ref}(lla) enu 1e-8
+
+#LLA -> ENU (with height in the reference)
+enu_wh = ENU(-343.493749083977, 478.764855466788, -0.027242885224325164 - 10.0)
+lla_ref_wh = LLA_WGS84(-71.09183, 42.36299, 10.0)
+@xyz_approx_eq_eps ENU(lla, lla_ref_wh) enu_wh 1e-8
+@xyz_approx_eq_eps ENU{lla_ref_wh}(lla) enu_wh 1e-8
 
 # ECEF -> ENU
 @xyz_approx_eq_eps ENU(ecef, lla_ref) enu 1e-8
@@ -294,9 +300,9 @@ for _ = 1:10_000
     enu000 = ENU(0.0, 0.0, 0.0)   
 
     # ecefa is the same point as lla so...
-    @xyz_approx_eq ENU(ecefa, lla) enu000
+    @xyz_approx_eq_eps ENU(ecefa, lla) enu000   1e-8
     @xy_approx_eq_eps ENU(ecefa, ll) enu000 1e-8
-    @z_approx_eq_eps ENU(ecefa, ll) lla 1e-8
+    @z_approx_eq_eps ENU(ecefa, ll) lla     1e-8
 
 
     # get another LL and LLA point to use a reference for ENU transforms
@@ -430,6 +436,7 @@ function benchmark()
     @time P4_conv(lla_vec)
 
 end
+
 
 
 

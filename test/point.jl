@@ -18,7 +18,6 @@ lla = LLA(x, y, rand())
 @test LLA(getX(lla), getY(lla), getZ(lla)) == lla
 @test getY(ll) == y
 @test getX(ll) == x
-@test_throws MethodError getZ(ll)
 
 enu = ENU(x, y, rand())
 @test ENU(getX(enu), getY(enu), getZ(enu)) == enu

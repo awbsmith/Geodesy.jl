@@ -1,6 +1,8 @@
 module Geodesy
 
-using Proj4 # Proj4 is the workhorse behine the module 
+
+using FixedSizeArrays
+using Proj4  
 
 import Base.show, Base.call, Base.convert
 
@@ -27,7 +29,7 @@ export
     ENU_NULL,
 
     # Other types
-    Bounds,
+    # Bounds,  # I dont want to export something named Bounds, maybe rename to Geobounds?
 
     # Named datums
     WGS84,
@@ -44,8 +46,8 @@ export
     utmzone, 
 
     # Methods
-    center,
-    distance,
+    # center,   # dont want to export names this generic
+    # distance, # dont want to export names this generic
 
     # convert to / from geodesy types
     geodify,
@@ -73,7 +75,7 @@ export
     =#
 
 
-for f in ["datums", "ellipsoids", "srids", "geodesy_types", "known_srids", "utm", "point_methods", "transform", "bounds", "vicenty", "distance", "external"]
+for f in ["datums", "ellipsoids", "srids", "geodesy_types", "known_srids", "utm", "type_methods", "transform", "bounds", "vicenty", "distance", "external"]
     include("$f.jl")
 end
 

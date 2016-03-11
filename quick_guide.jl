@@ -110,15 +110,14 @@ ecef_fake = geotransform(ECEF, lla_osgb36)         # = 6.377563396e6, 0.0, 0.0
 
 # If in doubt, datum conversions can be using the CRS type to get Proj4 to do it, e.g. 
 ecef_srid = geotransform(SRID(ECEF{WGS84}), lla_osgb36)     # = 6.377879171552554e6,-99.12039106890559, 534.423089412207
-ecef_wgs84 = convert(ECEF{WGS84}, ecef_srid)             # convert to a type native to this package (type conversion not a transformation)
+ecef_wgs84 = convert(ECEF{WGS84}, ecef_srid)                # convert to a type native to this package (type conversion not a transformation)
 
 # or equivilently
 srid = SRID(lla_odgb36)
-lla_srid = convert(CRS{srid}, lla_osgb36)           # type conversion not a transformation
-ecef_wgs84_2 = geotransform(ECEF{WGS84}, lla_srid)            # = 6.377879171552554e6,-99.12039106890559, 534.423089412207
+lla_srid = convert(CRS{srid}, lla_osgb36)                   # type conversion not a transformation
+ecef_wgs84_2 = geotransform(ECEF{WGS84}, lla_srid)          # = 6.377879171552554e6,-99.12039106890559, 534.423089412207
         
 
-# geotransform(WGS84, 
 
 
 

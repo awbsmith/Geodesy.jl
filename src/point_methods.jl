@@ -14,12 +14,12 @@ Local_fam = Union{LocalPosition}
 LL_fam = Union{LLA, LL}
 
 
-Proj4_fam = Union{WorldPosition, CRS}           # acceptable types to give to Proj4
+Proj4_fam = Union{WorldPosition, Proj4Type}      # acceptable types to give to Proj4
 
-Vec3_fam = Union{WorldPosition, LocalPosition}  # for three element point types
-Vec2_fam = Union{LL}                              # for three element point types
+Vec3_fam = Union{WorldPosition, LocalPosition}   # for three element point types
+Vec2_fam = Union{LL}                             # for three element point types
 
-ELL_param_fam = Union{LLA, LL, ECEF}              # things where an ellipse / psuedo datum are the template param
+ELL_param_fam = Union{LLA, LL, ECEF}             # things where an ellipse / psuedo datum are the template param
 LL_param_fam = Union{ENU}                        # things where an LLA points is the template param
 
 

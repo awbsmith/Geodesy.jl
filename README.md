@@ -2,14 +2,17 @@
 [![Build Status](https://travis-ci.org/JuliaGeo/Geodesy.jl.svg?branch=master)](https://travis-ci.org/JuliaGeo/Geodesy.jl)
 [![Coverage Status](http://img.shields.io/coveralls/JuliaGeo/Geodesy.jl.svg)](https://coveralls.io/r/JuliaGeo/Geodesy.jl)
 
-Geodesy is designed to work with world locations in various coordinate systems. 
+The Geodesy package implements geodetic transformations bewteen various coordinate systems. 
 
-![Coordinate Reference systems](http://www.crs-geo.eu/SharedDocs/Bilder/CRS/schema-crs-datum-cs,property=default.gif)
+
+### Terminology
+
+![Coordinate Reference systems](http://www.crs-geo.eu/SharedDocs/Bilder/CRS/schema-crs-datum-cs,property=default.gif) ![](http://i.stack.imgur.com/aeS8k.png)
 [www.crs-geo.eu](http://www.crs-geo.eu/nn_124224/crseu/EN/CRS__Overview/definition-crs__node.html)
 
-The above image gives a quick picture of the components of the coordinate reference systems used in geodesy.  
+The above images gives a quick picture of the components of the coordinate reference systems used in geodesy, with the image on the right showing the data structure used by the EPSG authority as taken from the [EPSG website](http://www.epsg-registry.org/).
 
-This Geodesy package is intended for use with the "Coordinate System" subtypes. Following this Geodesy position types do not have full datum knowledge (e.g. where the coordinate system's origin is relative to the Earth), only the reference ellipsoid required to perform the coordindate system transforms.  Transforms defined in this package convert between coordinate systems (e.g. longitude latitude height -> cartesian etc), although a coordinate reference system type is currently provided to facilitate importing and exporting data.
+This Geodesy package is intended for use with the "Coordinate System" subtypes shown above. Following this Geodesy position types do not have full datum knowledge (e.g. where the coordinate system's origin is relative to the Earth), only the reference ellipsoid required to perform the coordindate system transforms.  Transforms defined in this package convert between coordinate systems (e.g. longitude latitude height -> cartesian etc), although a coordinate reference system type is currently provided to facilitate importing and exporting data.
 
 
 ### "Coordinate System" Types
@@ -31,9 +34,9 @@ The below type is parameterized by an `LL` point which determines the origin and
 
 ### "Coordinate **Reference** System" Types
 
-Coordinate reference sytem types have knowledge of the datum which is required to map a known point on the Earth to a position in the coordinate system. The [Proj4 package](https://github.com/FugroRoames/Proj4.jl) is (currently) used as a backend to allow transforming to / from / between "Coordinate _Reference_ Systems". 
+Coordinate reference sytem types have knowledge of the datum which is required to map a known point on the Earth to a position in the coordinate system. The [Proj4 package](https://github.com/FugroRoames/Proj4.jl) is currently used as a backend to allow transforming to / from / between "Coordinate _Reference_ Systems". 
 
-The below type is parameterised by a [spatial reference ID (SRID)](https://en.wikipedia.org/wiki/SRID). Note that SRIDs are used to describe more than just coordinate reference systems, so take care when selecting selected a suitable SRID.
+The below type is parameterised by a [spatial reference ID (SRID)](https://en.wikipedia.org/wiki/SRID). Note that SRIDs are used to describe more than just coordinate reference systems, so take care when selecting a suitable SRID.
 
 1. `CRS` - The coordinate _reference_ system point type.  This type should be used for operations that require knowledge of the datum, e.g. swapping between datums. Transformations involving this type are perfromed by Proj4 as a full understanding of coordinate reference systems is outside the scope of this package. It's left to the user to correctly interpret the fields of this type as different SRIDs use different coordinate systems ([lat, long, height] / [x, y, z] / [false east, false north, height] / etc).
 
