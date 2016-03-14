@@ -118,13 +118,13 @@ For a quick reference:
     lat long style CRS's,  x -> lon, y -> lat (or get_lat() and get_lon())
     utm style CRS's,  x -> false east, y -> false north, z -> up (or get_east() get_north() get_up())
 """
-immutable CRS{T <: SRID} <: WorldPosition
+immutable CRS{T <: AbstractSRID} <: WorldPosition
     x::Float64
     y::Float64
     z::Float64
 end
 
-default_params{T <: CRS}(::Type{T}) = (:(error("Always specify an SRID when using the CRS position type")),) 
+default_params{T <: CRS}(::Type{T}) = (UnknownSRID,) 
 
 # trait style functions
 has_srid{T <: CRS}(::Type{T}) = Val{true}
@@ -206,15 +206,15 @@ abstract AbstractCCRS{T, U} <: WorldPosition
 """
 Compound coordinate reference system where the height is relative to a geoid
 """
-immutable CCRS_Geoidal{T <: SRID, U <: AbstractGeoid} <: AbstractCCRS{T, U}
+immutable CCRS_Geoidal{T <: AbstractSRID, U <: AbstractGeoid} <: AbstractCCRS{T, U}
     x::Float64
     y::Float64
     z::Float64
     #z::GeoidHeight{U}
 end
 
-default_params{T <: CCRS_Geoidal}(::Type{T}) = (:(error("Always specify the SRID when using the CCRS_Geoidal position type")), 
-                                               :(error("Always specify a geoid when using the CCRS_Geoidal position type")))   
+default_params{T <: CCRS_Geoidal}(::Type{T}) = (UnknownSRID, 
+                                                UnknownGeoid)   
 
 # trait style functions
 has_srid{T <: CCRS_Geoidal}(::Type{T}) = Val{true}

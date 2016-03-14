@@ -12,7 +12,7 @@ The Geodesy package implements geodetic transformations bewteen various coordina
 
 [View the above as a data structure](http://i.stack.imgur.com/aeS8k.png)
 
-The above images gives a quick picture of the components of the coordinate reference systems used in geodesy, with the image on the right showing the data structure used by the EPSG authority as taken from the [EPSG website](http://www.epsg-registry.org/).
+The above images gives a quick picture of the components of the coordinate reference systems used in geodesy, with the data structure link showing the data structure used by the EPSG authority for the WGS84 (GPS) coordinate reference system as shown on their [EPSG website](http://www.epsg-registry.org/)).
 
 This Geodesy package is intended for use with the "Coordinate System" subtypes shown above. Following this Geodesy position types do not have full datum knowledge (e.g. where the coordinate system's origin is relative to the Earth), only the reference ellipsoid required to perform the coordindate system transforms.  Transforms defined in this package convert between coordinate systems (e.g. longitude latitude height -> cartesian etc), although a coordinate reference system type is currently provided to facilitate importing and exporting data.
 

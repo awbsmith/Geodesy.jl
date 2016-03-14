@@ -1,6 +1,9 @@
 
 abstract AbstractSRID
 
+# when we don't know
+immutable UnknownSRID <: AbstractSRID end
+
 # SRID as a type (so we can multiple disbatch based on it)
 # auth is a symbol, code is an integer
 immutable SRID{auth, code} <: AbstractSRID end  # good to have it as a subtype of datum? 
@@ -40,13 +43,12 @@ end
 
 # using a generated function to hopefully only generate one projection per SRID,
 # no matter how many transforms we do
-@generated function get_projection{ T <: SRID}(::Type{T})
+@generated function get_projection{T <: SRID}(::Type{T})
     # add the projection info
     const proj = Proj4.Projection(proj4_str(T))  # const is wishfull
     return :($proj)
 end
-
-
+get_projection{T <: UnknownSRID}(::Type{T}) = error("Can't build the Proj4 projection for an unknown SRID")
 
 
 

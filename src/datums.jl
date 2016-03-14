@@ -81,12 +81,27 @@ ref_date(::Type{NAD83}) = DateTime(1983)
 #
 abstract AbstractGeoid
 
+
+geoid_dir = ""
+"""
+Function to set the geoid directory
+"""
+function set_geoid_dir(path::AbstractString)
+    Geodesy.geoid_dir = path
+end
+
 # dont know the Geoid
 immutable UnknownGeoid <: AbstractGeoid end
+geoid_file(::Type{UnknownGeoid}) = error("Unsure which Geoid to use for an unknown Geoid")
 
 # Australia
 immutable AusGeoid09 <: AbstractGeoid end
 geoid_file(::Type{AusGeoid09}) = "ausgeoid09.gtx"
+
+
+
+
+
 
 
 # function to get a list of all datums
@@ -104,8 +119,14 @@ end
 
 
 
+
+
+
+
+#####################################################################
 # dev tool, find stuff in the Proj4 dicts
 # e.g find_match(Proj4.epsg, [r"proj=longlat", r"datum=WGS84"])
+#####################################################################
 function find_match{T,U}(p4_dict::Dict{T,U}, exprs)
     
     if !isa(exprs, Vector)
