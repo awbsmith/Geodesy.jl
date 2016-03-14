@@ -1,7 +1,16 @@
 using FixedSizeArrays  # to do maths on points
 
 
+##############################################
+# A type to hold properties of this package
+##############################################
 
+# add stuff as needed
+type GeodesyProperties
+    geoid_dir::ASCIIString
+end
+geodesy_properties = GeodesyProperties("/usr/local/share/proj"  # I think this is the normal directory for Proj
+                                      )
 
 
 ######################################################
@@ -206,20 +215,20 @@ abstract AbstractCCRS{T, U} <: WorldPosition
 """
 Compound coordinate reference system where the height is relative to a geoid
 """
-immutable CCRS_Geoidal{T <: AbstractSRID, U <: AbstractGeoid} <: AbstractCCRS{T, U}
+immutable CCRS_Geoid{T <: AbstractSRID, U <: AbstractGeoid} <: AbstractCCRS{T, U}
     x::Float64
     y::Float64
     z::Float64
     #z::GeoidHeight{U}
 end
 
-default_params{T <: CCRS_Geoidal}(::Type{T}) = (UnknownSRID, 
+default_params{T <: CCRS_Geoid}(::Type{T}) = (UnknownSRID, 
                                                 UnknownGeoid)   
 
 # trait style functions
-has_srid{T <: CCRS_Geoidal}(::Type{T}) = Val{true}
-has_geoid{T <: CCRS_Geoidal}(::Type{T}) = Val{true}
-get_handler{T <: CCRS_Geoidal}(::Type{T}) = GeodesyHandler
+has_srid{T <: CCRS_Geoid}(::Type{T}) = Val{true}
+has_geoid{T <: CCRS_Geoid}(::Type{T}) = Val{true}
+get_handler{T <: CCRS_Geoid}(::Type{T}) = GeodesyHandler
 
 
 

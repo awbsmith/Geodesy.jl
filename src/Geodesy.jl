@@ -9,7 +9,8 @@ import Base.show, Base.call, Base.convert
 export
 
     # Position types that understand datums
-    CRS,    
+    CRS,
+    CCRS_Geoid,    
 
     # Position types that understand ellipsoids
     LLA,

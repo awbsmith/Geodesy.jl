@@ -28,22 +28,25 @@ abstract KnownDatum <: AbstractDatum
 
 
 # build alias's for known datums 
-abstract Datum <: KnownDatum 
+"""
+When using a "static" datum fixed points on the Earth's surface move over time because of effects like continental drift (the datum is static but the Earth is not)
+"""
+abstract StaticDatum <: KnownDatum 
 
 # And make some datums based on them
-immutable WGS84 <: Datum; end
+immutable WGS84 <: StaticDatum; end
 ellipsoid(::Type{WGS84}) = ellipsoid(WGS84_ELLIPSE)
 show(io::IO, ::Type{WGS84}) = print(io, "WGS84")
 
-immutable NAD27 <: Datum; end # is this actually dynamic?
+immutable NAD27 <: StaticDatum; end # is this actually dynamic?
 ellipsoid(NAD27) = ellipsoid(CLARKE66_ELLIPSE)
 show(io::IO, ::Type{NAD27}) = print(io, "NAD27")
 
-immutable ED50 <: Datum; end 
+immutable ED50 <: StaticDatum; end 
 ellipsoid(::Type{ED50}) = ellipsoid(HAYFORD_ELLIPSE)
 show(io::IO, ::Type{ED50}) = print(io, "ED50")
 
-immutable OSGB36 <: Datum; end # is this actually dynamic?
+immutable OSGB36 <: StaticDatum; end # is this actually dynamic?
 ellipsoid(::Type{OSGB36}) = ellipsoid(AIRY_ELLIPSE)
 show(io::IO, ::Type{OSGB36}) = print(io, "OSGB36")
 
@@ -51,8 +54,8 @@ show(io::IO, ::Type{OSGB36}) = print(io, "OSGB36")
 # The below are dynamic datums (a fixed point on the earth's surface doesn't move with continental drift)
 # (aka the datum is dynamic allowing points to be static)
 """
-When using a "dynamic" datum fixed points on the Earths surface have constant coordinates (static) over time, because the datum changes (dynamic) over time to account for effects like continental drift.  
-Any accurate transformation between static and dynamic datums should include a time,
+When using a "dynamic" datum fixed points on the Earth's surface have constant coordinates (static) over time, because the datum changes (dynamic) over time to account for effects like continental drift.  
+Any accurate transformation between static and dynamic datums should include a time
 """
 abstract DynDatum <: KnownDatum 
 
@@ -81,24 +84,24 @@ ref_date(::Type{NAD83}) = DateTime(1983)
 #
 abstract AbstractGeoid
 
-
-geoid_dir = ""
 """
-Function to set the geoid directory
+Function to set / get the geoid directory
 """
 function set_geoid_dir(path::AbstractString)
-    Geodesy.geoid_dir = path
+    Geodesy.geodesy_properties.geoid_dir = path
 end
+get_geoid_dir() = Geodesy.geodesy_properties.geoid_dir
 
 # dont know the Geoid
 immutable UnknownGeoid <: AbstractGeoid end
 geoid_file(::Type{UnknownGeoid}) = error("Unsure which Geoid to use for an unknown Geoid")
 
+# Known Geoids
+abstract KnownGeoid <: AbstractGeoid
+
 # Australia
-immutable AusGeoid09 <: AbstractGeoid end
+immutable AusGeoid09 <: KnownGeoid end
 geoid_file(::Type{AusGeoid09}) = "ausgeoid09.gtx"
-
-
 
 
 
