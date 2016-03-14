@@ -107,7 +107,7 @@ bounds_enu_ref = Bounds{ENU}(-247.1268196136449, 247.1268196138187, -249.9308954
 
 
 ###################################
-### Check CRS / Proj4         ###
+### Check CRS / Proj4           ###
 ###################################
 
 # make sure the above are still valid
