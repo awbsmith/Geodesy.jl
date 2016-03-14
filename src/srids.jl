@@ -10,7 +10,7 @@ immutable SRID{auth, code} <: AbstractSRID end  # good to have it as a subtype o
 show{auth, code}(io::IO, ::Type{SRID{auth, code}}) = print(io, "$(auth)$(code)")
 
 #=
-# Ideally an SRID would be this but the below can't be use as a parameter of another type for for reasons, while a (Symbol, Int) tupple can zzz
+# Ideally an SRID would be this but the below can't be use as a parameter of another type for reasons, while a (Symbol, Int) tupple can be a parameter zzz
 immutable SRID <: AbstractSRID
     auth::Symbol
     code::Int
@@ -75,11 +75,15 @@ get_projection{T <: SRID, U <: UnknownGeoid}(::Type{T}, ::Type{U}) = error("Can'
     return :($proj)
 end
 
+# get the projection when there's a geoid involved
 @generated function get_projection{T <: SRID, G <: KnownGeoid}(::Type{T}, ::Type{G})
     const proj = Proj4.Projection(proj4_str(T, G))  # const is wishfull
     return :($proj)
 end
 
+# when the datum is provided as a tuple
+get_projection{T}(X::Tuple{T}) = get_projection(X[1])
+get_projection{T, G}(X::Tuple{T,G}) = get_projection(X[1], X[2])
 
 
 
@@ -87,3 +91,8 @@ end
 
 
 
+
+
+
+
+    

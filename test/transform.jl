@@ -177,7 +177,8 @@ for i = 1:1000
     @test -10 .<= band .< 0
 
     # correct SRID? (WGS84 datum only)
-    srid_out = Geodesy.utm_srid(lla)
+    (auth, code) = Geodesy.utm_srid(lla)
+    srid_out = SRID{auth, code}
     @test srid_out == srid 
 
 end

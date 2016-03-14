@@ -83,6 +83,7 @@ ref_date(::Type{NAD83}) = DateTime(1983)
 # type for custom geoids
 #
 abstract AbstractGeoid
+get_geoid{T <: AbstractGeoid}(::Type{T}) = T
 
 """
 Function to set / get the geoid directory
@@ -93,6 +94,9 @@ end
 get_geoid_dir() = Geodesy.geodesy_properties.geoid_dir
 
 # dont know the Geoid
+"""
+Default unknown geoid
+"""
 immutable UnknownGeoid <: AbstractGeoid end
 geoid_file(::Type{UnknownGeoid}) = error("Unsure which Geoid to use for an unknown Geoid")
 
@@ -121,7 +125,22 @@ function get_datums(datum::DataType=AbstractDatum, super::ASCIIString="", out=Ve
 end
 
 
+# function to try and guess the geoid dir
+function find_geoid_dir()
+    path = getenv("PROJ_LIB") # find a PROJ_LIB environmental variable
+    if (length(path) == 0)
+        path = "/usr/local/share/proj"  # I think this is the normal directory for Proj
+    end
+end
 
+# function to retrieve environment variables
+function getenv(var::AbstractString)
+	val = ccall( (:getenv, "libc"),
+		         Ptr{UInt8}, (Ptr{UInt8},), bytestring(var))
+	path = (val == C_NULL) ? "" : ASCIIString(bytestring(val))
+    println(path)
+    return path
+end
 
 
 

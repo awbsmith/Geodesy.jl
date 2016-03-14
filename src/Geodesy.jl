@@ -26,33 +26,37 @@ export
     # convenience for using points without a reference point
     LL_NULL,
     LLA_NULL,   
-    ECEF_NULL,  
+    ECEF_NULL,
+    CRS_NULL,  
     ENU_NULL,
 
     # Other types
     # Bounds,  # I dont want to export something named Bounds, maybe rename to Geobounds?
 
-    # Named datums
+    # Datum related
+    get_datum,
+    get_datums,    # get a list of all known datums
+    AbstractDatum,
     WGS84,
     GRS80,
     GDA94,  
+    UnknownDatum,
 
     # transform function
-    geotransform, 
+    geotransform,
+    geotransform_vector,  
 
     # Srid related
+    get_srid,
+    AbstractSRID,
     SRID,
+    UnknownSRID, 
 
-    # utm related
-    utmzone, 
-
-    # Methods
-    # center,   # dont want to export names this generic
-    # distance, # dont want to export names this generic
-
-    # convert to / from geodesy types
-    geodify,
-    ungeodify,
+    # Geoid related
+    get_geoid,
+    AbstractGeoid,  
+    UnknownGeoid, 
+    
 
     # accessors
     getX,
@@ -64,6 +68,20 @@ export
     get_east,
     get_north,
     get_up,
+    
+    
+    
+
+    # utm related
+    utm_zone, 
+
+    # Methods
+    # center,   # dont want to export names this generic
+    # distance, # dont want to export names this generic
+
+    # convert to / from geodesy types
+    geodify,
+    ungeodify,
 
     decimal2dms,
     dms2decimal

@@ -1,7 +1,53 @@
 
 #
 # Generic version of geotransform, fall through to including the handlers as the final two inputs
-# 
+#
+"""
+  geotransform - function to transfom points between coordinate systems
+
+  Usage:
+
+    geotransform(::Type{T}, X)        
+
+        Transform geodesy point X to the coordinate system defined by T     
+
+        Examples:
+            geotransform(ECEF,                   LLA{WGS84}(0,0,0))
+            geotransform(ECEF{WGS84},            LLA{WGS84}(0,0,0))
+            geotransform(CRS{SRID{:EPSG, 4978}}, LLA{WGS84}(0,0,0))   
+            geotransform(ENU{LLA{WGS84}(0,0,0)}, LLA{WGS84}(1,1,10))  # ENU frame centered on LLA{WGS84}(0,0,0)
+
+
+    geotransform(::Type{T}, X, ref)   
+
+        Transform geodesy point X to the coordinate system defined by T using the reference data in ref    
+
+        Example:
+            geotransform(ECEF{UnknownDatum}, LLA{UnknownDatum}(0,0,0), Geodesy.eWGS84)  # supply the ellipse to use since there's no datum info
+            geotransform(ENU, LLA{WGS84}(1,1,10), LLA{WGS84}(0,0,0))                    # ENU frame centered on LLA{WGS84}(0,0,0)
+
+
+    geotransform(::Type{T}, X, handler_output, handler_input)   
+
+        Transform geodesy point X to the coordinate system defined by T using the package indicated by the package handlers
+                                    
+        Example:
+            geotransform(ECEF{WGS84}, LLA{WGS84}(0,0,0), Geodesy.Proj4Handler, Geodesy.Proj4Handler)  # Get the Proj4 package to do the transform
+
+
+    geotransform(::Type{T}, X, ref, handler_output, handler_input)   
+
+        Transform geodesy point X to the coordinate system defined by T using the reference data ref and package indicated by the handlers
+                                    
+        Example:
+
+            # Get the Proj4 package to do the transform by suppling the SRIDs seperately
+            geotransform(ECEF{UnknownDatum}, LLA{UnknownDatum}(0,0,0), (SRID{:epsg, 4978}, SRID{:epsg, 4326}), Geodesy.Proj4Handler, Geodesy.Proj4Handler)  
+
+
+    
+
+"""
 geotransform(X)         = geotransform(X, get_handler(X))
 geotransform(X, Y)      = geotransform(X, Y, get_handler(X), get_handler(Y))
 geotransform(X, Y, ref) = geotransform(X, Y, ref, get_handler(X), get_handler(Y))  # with a reference point
@@ -35,9 +81,9 @@ geotransform_params(X, Y, ref) = geotransform_params(X, Y, ref, get_handler(X), 
 #
 # vectorized version (Proj4 point need special handling)
 #
-geotransform_vector(X)         = geotransform_params(X, get_handler(X))
-geotransform_vector(X, Y)      = geotransform_params(X, Y, get_handler(X), get_handler(Y))
-geotransform_vector(X, Y, ref) = geotransform_params(X, Y, ref, get_handler(X), get_handler(Y))  # with a reference point
+geotransform_vector(X)         = geotransform_vector(X, get_handler(X))
+geotransform_vector(X, Y)      = geotransform_vector(X, Y, get_handler(X), get_handler(Y[1]))
+geotransform_vector(X, Y, ref) = geotransform_vector(X, Y, ref, get_handler(X), get_handler(Y[1]))  # with a reference point
 
 
 
@@ -499,7 +545,9 @@ geotransform_vector{T, U}(::Type{T}, X::Vector{U}, ::Type{Proj4Handler}, ::Type{
 
 
 geotransform_vector{T, U, S1, S2}(::Type{T}, X::Vector{U}, srids::Tuple{S1, S2}, ::Type{Proj4Handler}, ::Type{GeodesyHandler}) = proj4_vectorized(T, X, srids)
-geotransform_vector{T, U, S1, S2}(::Type{T}, X::Vector{U}, srids::Tuple{S1, S2}, ::Type{GeodesyHandler}, ::Type{Proj4Handler}) = proj4_vectorized(T, X, srids)
+function geotransform_vector{T, U, S1, S2}(::Type{T}, X::Vector{U}, srids::Tuple{S1, S2}, ::Type{GeodesyHandler}, ::Type{Proj4Handler}) 
+    proj4_vectorized(T, X, srids)
+end
 geotransform_vector{T, U, S1, S2}(::Type{T}, X::Vector{U}, srids::Tuple{S1, S2}, ::Type{Proj4Handler}, ::Type{Proj4Handler}) = proj4_vectorized(T, X, srids)
 
 # vectorizied transform for proj4 (looping calls to proj4 is slow)
@@ -538,7 +586,7 @@ function proj4_vectorized{T, U, S1, S2}(::Type{T}, X::Vector{U}, srids::Tuple{S1
     end
 
     # perform it
-    Proj4.transform!(Geodesy.get_projection(S2), Geodesy.get_projection(S1), mat, false)
+    Proj4.transform!(Geodesy.get_projection(srids[2]), Geodesy.get_projection(srids[1]), mat, false)
 
     # and assign the output
     X = Vector{T}(length(X))

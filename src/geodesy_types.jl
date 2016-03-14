@@ -9,8 +9,10 @@ using FixedSizeArrays  # to do maths on points
 type GeodesyProperties
     geoid_dir::ASCIIString
 end
-geodesy_properties = GeodesyProperties("/usr/local/share/proj"  # I think this is the normal directory for Proj
+geodesy_properties = GeodesyProperties(
+                                       find_geoid_dir()
                                       )
+                                      
 
 
 ######################################################
@@ -133,7 +135,11 @@ immutable CRS{T <: AbstractSRID} <: WorldPosition
     z::Float64
 end
 
+# useful shortcuts
+typealias CRS_NULL CRS{UnknownSRID}
+
 default_params{T <: CRS}(::Type{T}) = (UnknownSRID,) 
+
 
 # trait style functions
 has_srid{T <: CRS}(::Type{T}) = Val{true}
@@ -223,12 +229,12 @@ immutable CCRS_Geoid{T <: AbstractSRID, U <: AbstractGeoid} <: AbstractCCRS{T, U
 end
 
 default_params{T <: CCRS_Geoid}(::Type{T}) = (UnknownSRID, 
-                                                UnknownGeoid)   
+                                              UnknownGeoid)   
 
 # trait style functions
 has_srid{T <: CCRS_Geoid}(::Type{T}) = Val{true}
 has_geoid{T <: CCRS_Geoid}(::Type{T}) = Val{true}
-get_handler{T <: CCRS_Geoid}(::Type{T}) = GeodesyHandler
+get_handler{T <: CCRS_Geoid}(::Type{T}) = Proj4Handler
 
 
 
