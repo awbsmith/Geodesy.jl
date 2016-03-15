@@ -131,6 +131,7 @@ function find_geoid_dir()
     if (length(path) == 0)
         path = "/usr/local/share/proj"  # I think this is the normal directory for Proj
     end
+    return path
 end
 
 # function to retrieve environment variables
@@ -138,7 +139,6 @@ function getenv(var::AbstractString)
 	val = ccall( (:getenv, "libc"),
 		         Ptr{UInt8}, (Ptr{UInt8},), bytestring(var))
 	path = (val == C_NULL) ? "" : ASCIIString(bytestring(val))
-    println(path)
     return path
 end
 
