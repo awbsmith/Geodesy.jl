@@ -218,8 +218,6 @@ end
 # Function to add the template parameter to a type
 ##############################################################
 
-
-
 # general version
 function add_param_methods{geodesy_type}(::Type{geodesy_type})
 
@@ -306,6 +304,52 @@ function add_infer_param_methods{type_1, type_2}(::Type{type_1}, ::Type{type_2})
 end
 
 
+#####################################################
+# add basic maths to the point type
+#####################################################
+
+function add_maths{geodesy_type}(::Type{geodesy_type}, fields)
+
+    nf = length(fields)  # number of fields and their names for the Geodesy variables
+
+    # allow interaction with these types
+    interact_types = [Vec{nf}, Vector]  
+
+    # create an expression to add to
+    q = quote end
+
+    # and build (N.B. template functions keep clashing with FixedSizeArrays, so dont use them)
+    for iT in interact_types
+
+        if (nf == 2)
+            qn = quote
+                
+                # addition 
+                +(X::$(geodesy_type), dX::$(iT)) = typeof(X)(X.$(fields[1]) + dX[1], X.$(fields[2]) + dX[2])
+                # +(dX::$(iT), X::$(geodesy_type)) = typeof(X)(X.$(fields[1]) + dX[1], X.$(fields[2]) + dX[2])  # should this version be a thing? Cant avoid a clash with FSA anyway...
+
+                # subtraction
+                -(X::$(geodesy_type), dX::$(iT)) = typeof(X)(X.$(fields[1]) - dX[1], X.$(fields[2]) - dX[2])
+            end
+        elseif (nf == 3)
+            qn = quote
+
+                # addition 
+                +(X::$(geodesy_type), dX::$(iT)) = typeof(X)(X.$(fields[1]) + dX[1], X.$(fields[2]) + dX[2], X.$(fields[3]) + dX[3])
+                # +(dX::$(iT), X::$(geodesy_type)) = typeof(X)(X.$(fields[1]) + dX[1], X.$(fields[2]) + dX[2], X.$(fields[3]) + dX[3])   # should this version be a thing? Cant avoid a clash with FSA anyway...
+
+                # subtraction
+                -(X::$(geodesy_type), dX::$(iT)) = typeof(X)(X.$(fields[1]) - dX[1], X.$(fields[2]) - dX[2], X.$(fields[3]) - dX[3])
+            end
+        else
+            qn = quote end
+        end
+        append!(q.args, qn.args)  # include them
+    end
+    
+    return q
+
+end
 
 
 #####################################################
@@ -469,6 +513,9 @@ function build_methods{geo_type}(::Type{geo_type}, fields=fieldnames(geo_type), 
     
     # add the parameter manipulation methods
     append!(qb.args, Geodesy.add_param_methods(geo_type).args)
+
+    # add basic maths
+    append!(qb.args, Geodesy.add_maths(geo_type, fields).args)
 
     # add additional constructors
     append!(qb.args, Geodesy.add_constructors(geo_type).args)

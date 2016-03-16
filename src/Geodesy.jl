@@ -8,7 +8,7 @@ module Geodesy
 using FixedSizeArrays
 using Proj4  
 
-import Base.show, Base.call, Base.convert
+import Base.show, Base.call, Base.convert, Base.+, Base.-
 
 export
 
