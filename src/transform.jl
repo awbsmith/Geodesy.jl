@@ -22,7 +22,7 @@
 
         Transform geodesy point X to the coordinate system defined by T using the reference data in ref    
 
-        Example:
+        Examples:
             geotransform(ECEF{UnknownDatum}, LLA{UnknownDatum}(0,0,0), Geodesy.eWGS84)  # supply the ellipse to use since there's no datum info
             geotransform(ENU, LLA{WGS84}(1,1,10), LLA{WGS84}(0,0,0))                    # ENU frame centered on LLA{WGS84}(0,0,0)
 
@@ -81,9 +81,9 @@ geotransform_params(X, Y, ref) = geotransform_params(X, Y, ref, get_handler(X), 
 #
 # vectorized version (Proj4 point need special handling)
 #
-geotransform_vector(X)         = geotransform_vector(X, get_handler(X))
-geotransform_vector(X, Y)      = geotransform_vector(X, Y, get_handler(X), get_handler(Y[1]))
-geotransform_vector(X, Y, ref) = geotransform_vector(X, Y, ref, get_handler(X), get_handler(Y[1]))  # with a reference point
+geotransform_vector{T}(X::Vector{T})                              = geotransform_vector(X, get_handler(eltype(T)))
+geotransform_vector{T, U <: AbstractVector}(::Type{T}, Y::U)      = geotransform_vector(T, Y, get_handler(T), get_handler(eltype(U)))
+geotransform_vector{T, U <: AbstractVector}(::Type{T}, Y::U, ref) = geotransform_vector(T, Y, ref, get_handler(T), get_handler(eltype(U)))  # with a reference point
 
 
 
@@ -279,15 +279,11 @@ end
 ### Transformation matrices for ECEF -> ENU ###
 ###############################################
 
-""" 
-Returns the rotation and translation (R, t) to perform the geotransformation:
+# reference point in the template
+geotransform_params{R <: Union{LLA, LL}, T <: ECEF}(::Type{ENU{R}}, ::Type{T}, ::Type{GeodesyHandler}, ::Type{GeodesyHandler}) = geotransform_params(T, ENU, R, GeodesyHandler, GeodesyHandler)
 
-Xout = R * Xin + t  # using FixedSizeArrays
- 
-"""
-geotransform_params{T}(::Type{ENU{T}}, ::Type{GeodesyHandler}) = geotransform_params(ENU, T, GeodesyHandler, GeodesyHandler) 
-
-function geotransform_params{T <: Union{LLA, LL}}(::Type{ENU}, ll_ref::T, ::Type{GeodesyHandler}, ::Type{GeodesyHandler})  # TODO: something, because it looks like its transforming LLA -> ENU
+# reference point as a parameter
+function geotransform_params{T <: ECEF, Ref <: Union{LLA, LL}}(::Type{ENU}, ::Type{T}, ll_ref::Ref, ::Type{GeodesyHandler}, ::Type{GeodesyHandler})  
     
     ϕdeg, λdeg, h =  get_lat(ll_ref), get_lon(ll_ref), get_alt(ll_ref)
 
@@ -296,7 +292,7 @@ function geotransform_params{T <: Union{LLA, LL}}(::Type{ENU}, ll_ref::T, ::Type
     sinϕ, cosϕ = sind(ϕdeg), cosd(ϕdeg)
 
     # Reference
-    ecef_ref = T <: LL ? geotransform(ECEF, ll_ref) : geotransform(ECEF, LL(ll_ref))  # omit height here when calculating the reference point in ECEF.  Add it back at the end
+    ecef_ref = Ref <: LL ? geotransform(T, ll_ref) : geotransform(T, LL(ll_ref))  # omit height here when calculating the reference point in ECEF.  Add it back at the end
 
     R = @fsa([-sinλ        cosλ        0.0;
               -cosλ*sinϕ   -sinλ*sinϕ    cosϕ;
@@ -364,9 +360,11 @@ end
 ### Transformation matrices for ENU -> ECEF ###
 ###############################################
 
+geotransform_params{T <: ECEF, R <: Union{LLA, LL}}(::Type{T}, ::Type{ENU{R}}, ::Type{GeodesyHandler}, ::Type{GeodesyHandler}) = geotransform_params(T, ENU, R, GeodesyHandler, GeodesyHandler)
+
 # no LLA reference provided in the ENU type so a LLA ref must be supplied
 # N.B. this will ignore the LLA refernce in ENU template
-function geotransform_params{T <: ECEF, U <: Union{LLA, LL}}(::Type{T}, ll_ref::U, ::Type{GeodesyHandler}, ::Type{GeodesyHandler}) # TODO: something, because it looks like its transforming LLA -> ECEF
+function geotransform_params{T <: ECEF, U <: ENU, Ref <: Union{LLA, LL}}(::Type{T}, ::Type{U}, ll_ref::Ref, ::Type{GeodesyHandler}, ::Type{GeodesyHandler}) 
     
     ϕdeg, λdeg, h =  get_lat(ll_ref), get_lon(ll_ref), get_alt(ll_ref)
 
@@ -375,7 +373,7 @@ function geotransform_params{T <: ECEF, U <: Union{LLA, LL}}(::Type{T}, ll_ref::
     sinϕ, cosϕ = sind(ϕdeg), cosd(ϕdeg)
 
     # Reference
-    ecef_ref = U <: LL ? geotransform(T, ll_ref) : geotransform(T, LL(ll_ref))  # omit height here when calculating the reference point in ECEF.  Add it back later
+    ecef_ref = Ref <: LL ? geotransform(T, ll_ref) : geotransform(T, LL(ll_ref))  # omit height here when calculating the reference point in ECEF.  Add it back later
 
     R = @fsa([-sinλ  -cosλ*sinϕ    cosλ*cosϕ;
                cosλ  -sinλ*sinϕ    sinλ*cosϕ;

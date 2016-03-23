@@ -323,7 +323,7 @@ for _ = 1:10_000
     @test_approx_eq_eps getZ(lla2) zdiff 1e-8
 
     # Test the transformation matrix approach as well
-    (Rf,tf) = Geodesy.geotransform_params(ENU, lla2)
+    (Rf,tf) = Geodesy.geotransform_params(ENU, ECEF, lla2)
     @xyz_approx_eq_eps ENU(Rf * Vec(ecefa) + tf) enu2 1e-8
 
     # ECEF => ENU => ECEF w/ little change
@@ -331,7 +331,7 @@ for _ = 1:10_000
     @xyz_approx_eq_eps ECEF(enu2v1, lla) ecef2 1e-8
 
     # Test the transformation matrix approach as well
-    (Rb,tb) = Geodesy.geotransform_params(ECEF, lla)
+    (Rb,tb) = Geodesy.geotransform_params(ECEF, ENU, lla)
     @xyz_approx_eq_eps ECEF(Rb * Vec(enu2v1) + tb) ecef2 1e-8
 
     # ENU => LL same as ENU => ECEF => LLA

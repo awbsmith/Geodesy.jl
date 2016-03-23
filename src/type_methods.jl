@@ -330,6 +330,11 @@ function add_maths{geodesy_type}(::Type{geodesy_type}, fields)
 
                 # subtraction
                 -(X::$(geodesy_type), dX::$(iT)) = typeof(X)(X.$(fields[1]) - dX[1], X.$(fields[2]) - dX[2])
+
+                # NaN
+                isnan(X::$(geodesy_type)) = Vec{2, Bool}(isnan(X.$(fields[1])),   isnan(X.$(fields[2])))
+                
+            
             end
         elseif (nf == 3)
             qn = quote
@@ -340,6 +345,9 @@ function add_maths{geodesy_type}(::Type{geodesy_type}, fields)
 
                 # subtraction
                 -(X::$(geodesy_type), dX::$(iT)) = typeof(X)(X.$(fields[1]) - dX[1], X.$(fields[2]) - dX[2], X.$(fields[3]) - dX[3])
+
+                # NaN
+                isnan(X::$(geodesy_type)) = Vec{3, Bool}(isnan(X.$(fields[1])), isnan(X.$(fields[2])), isnan(X.$(fields[3])))
             end
         else
             qn = quote end

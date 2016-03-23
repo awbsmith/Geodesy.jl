@@ -8,26 +8,36 @@ module Geodesy
 using FixedSizeArrays
 using Proj4  
 
-import Base.show, Base.call, Base.convert, Base.+, Base.-
+import Base.show, Base.call, Base.convert, Base.+, Base.-, Base.isnan
 
 export
 
-    # Position types that understand datums
-    CRS,
-    CCRS_Geoid,    
+    #
+    # Position types supported by Geodesy directly
+    #
 
-    # Position types that understand ellipsoids
+    # World coordinate systems
     LLA,
     LL,
     ECEF,
 
-    # Local coordinate frames
-    ENU,
+    # Local coordinate systems
+    ENU,  
 
+    #
+    # Position types supported by Proj4
+    #
+    CRS,
+    CCRS_Geoid,    
+
+
+    #
+    # convenience for using points with a set datum
+    #
     LLA_WGS84,   # typealias for LLA{WGS84}
     ECEF_WGS84,  # typealias for ECEF{WGS84}
-
-    # convenience for using points without a reference point
+    
+    # no datum info
     LL_NULL,
     LLA_NULL,   
     ECEF_NULL,
@@ -37,33 +47,51 @@ export
     # Other types
     # Bounds,  # I dont want to export something named Bounds, maybe rename to Geobounds?
 
-    # Datum related
-    get_datum,
-    get_datums,    # get a list of all known datums
+
+    #
+    # export some datums
+    #
     AbstractDatum,
+    UnknownDatum,
     WGS84,
     GRS80,
     GDA94,  
-    UnknownDatum,
 
-    # transform function
-    geotransform,
-    geotransform_vector,  
+    # datum functions
+    get_datum,
+    get_datums,    # get a list of all known datums
+    
+    
+    #
+    # transformation functions
+    #
+    geotransform,           # transform a point
+    geotransform_vector,    # transform a vector of points
+    geotransform_params,    # parameters for a transformation
 
-    # Srid related
-    get_srid,
+    #
+    # SRID related
+    #
     AbstractSRID,
-    SRID,
     UnknownSRID, 
-
-    # Geoid related
-    get_geoid,
-    AbstractGeoid,  
-    UnknownGeoid, 
+    SRID,
+    get_srid,
     
 
+    #
+    # Geoid related
+    #
+    AbstractGeoid,  
+    UnknownGeoid, 
+    get_geoid,
+
+    # utm related
+    utm_zone, 
+    
+    #
     # accessors
-    getX,
+    #
+    getX,       # should I really export this?
     getY,
     getZ,
     get_lat,
@@ -72,12 +100,6 @@ export
     get_east,
     get_north,
     get_up,
-    
-    
-    
-
-    # utm related
-    utm_zone, 
 
     # Methods
     # center,   # dont want to export names this generic
