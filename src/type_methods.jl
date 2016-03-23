@@ -24,6 +24,10 @@ add_param{T}(::Type{T}) = T
 add_param{T}(::Type{T}, X) = T
 
 
+# by default point aren't lla
+has_alt{T}(::Type{T}) = false
+
+
 ##############################################################
 # Function to add accessor methods to Geodesy point types
 ##############################################################
@@ -375,33 +379,41 @@ function add_constructors{geodesy_type}(::Type{geodesy_type})
 
     end
 
+    #
     # construction from scalars
-    nfields = length(fieldnames(geodesy_type))
-    if (nfields == 2)
-        qn = quote
+    #
+    fields = fieldnames(geodesy_type)
+    nfields = length(fields)
+    
+    # create an expression for a tuple x1, x2, x3...
+    rhs_expr = :(())
+    append!(rhs_expr.args, [:($(fields[i])) for i in 1:nfields])
 
-            # construction from scalars
-            call(::Type{$(geodesy_type)}, x::Real, y::Real)                  = add_param($(geodesy_type))(x,y)
-            call{T <: $(geodesy_type)}(::Type{T}, x::Real, y::Real, z::Real) = add_param(T)(x,y)   # legacy support, drop the height term
-   
-        end
-    elseif (nfields == 3)
-        
-        qn = quote
-
-            # construction from scalars
-            call(::Type{$(geodesy_type)}, x::Real, y::Real, z::Real)         = add_param($(geodesy_type))(x,y,z)  
-            call{T <: $(geodesy_type)}(::Type{T}, x::Real, y::Real)          = add_param(T)(x,y,0) # legacy support, insert the height term
-
-        end
-    else
-        qn = quote
-        #    call{T <: $(geodesy_type)}(::Type{T}, X...) = add_param(T)(X...)    # this can't be fast...
-        end
-    end 
+    # create an expression for a tuple x1::Int, x2::Int, x3::Int... for allowing construction from Ints
+    lhs_expr = :(())
+    append!(lhs_expr.args, [:($(fields[i])::Real) for i in 1:nfields])
+    
+    # and build the constructor
+    qn = quote
+        call(::Type{$(geodesy_type)}, $(lhs_expr.args...)) = add_param($(geodesy_type))($(rhs_expr.args...))
+    end
     append!(q.args, qn.args)
+
+    # if this is an lla type, for legacy reasons we allow construction with / without the height parameter
+    if has_alt(geodesy_type)
+        if (nfields == 3)
+            qn = quote  # construct it wihtout the height input
+                call{T <: $(geodesy_type)}(::Type{T}, $(lhs_expr.args[1:2]...)) = add_param(T)($(rhs_expr.args[1:2]...), 0.0)
+            end
+            append!(q.args, qn.args)
+        elseif (nfields == 2)
+            qn = quote  # construct it with the height input and ignore the height
+                call{T <: $(geodesy_type)}(::Type{T}, $(lhs_expr.args[1:2]...), alt::Real) = add_param(T)($(rhs_expr.args[1:2]...))
+            end
+            append!(q.args, qn.args)
+        end
+    end        
     return q  
-     
 end 
 
 
@@ -464,43 +476,69 @@ end
 
 
 #
-# construction
+# construction a vector of points from a matrix
 #
-function add_vector_construction{geodesy_type}(::Type{geodesy_type}) 
+function add_matrix_construction{geodesy_type}(::Type{geodesy_type}) 
 
     nfields = length(fieldnames(geodesy_type))
-    if (nfields == 2)
-        quote
 
-            # allow construction from a matrix via convert as its value preserving
-            function convert{T <: $(geodesy_type)}(::Type{Vector{T}}, X::Union{AbstractMatrix, Mat}; row::Bool=true)
-                oT = add_param(T)
-                n = (row) ? size(X,1) : size(X,2)
-                Xout = Vector{oT}(n)  # cant make list comprehesion get the output type right
-                if row 
-                    for i = 1:n; Xout[i] = oT(X[i,1], X[i,2]); end
-                else
-                    for i = 1:n; Xout[i] = oT(X[1,i], X[2,i]); end
-                end
-                return Xout
+    # grab from input matrix using an index
+    row_expr = :(())  # for when each point is in a row
+    append!(row_expr.args, [:(X[i, $(i)]) for i in 1:nfields])
+
+    col_expr = :(())  # for when each point is in a column
+    append!(col_expr.args, [:(X[$(i), i]) for i in 1:nfields])
+
+    quote
+
+        # allow construction from a matrix via convert as its value preserving
+        function convert{T <: $(geodesy_type)}(::Type{Vector{T}}, X::Union{AbstractMatrix, Mat}; row::Bool=true)
+            oT = add_param(T)
+            n = (row) ? size(X,1) : size(X,2)
+            Xout = Vector{oT}(n)  # cant make list comprehesion get the output type right
+            if row 
+                for i = 1:n; Xout[i] = oT($(row_expr.args...)); end
+            else
+                for i = 1:n; Xout[i] = oT($(col_expr.args...)); end
             end
-        end
-    elseif (nfields == 3)
-        quote
-            # allow construction from a matrix via convert as its value preserving
-            function convert{T <: $(geodesy_type)}(::Type{Vector{T}}, X::Union{AbstractMatrix, Mat}; row::Bool=true)
-                oT = add_param(T)
-                n = (row) ? size(X,1) : size(X,2)
-                Xout = Vector{oT}(n)  # cant make list comprehesion get the output type right
-                if (row)
-                    for i = 1:n; Xout[i] = oT(X[i,1], X[i,2], X[i,3]); end
-                else
-                    for i = 1:n; Xout[i] = oT(X[1,i], X[2,i], X[3,i]); end
-                end
-                return Xout
-            end
+            return Xout
         end
     end
+    
+end
+
+
+
+#####################################################################################
+# function to allow construction from fixed size vectors
+# I think this is only needed because of a bug in FixedSizeArrays
+# or maybe its a new feature
+#####################################################################################
+ 
+function add_import_export(geodesy_type, fields)  
+
+    def_params = default_params(geodesy_type)  # default element to use
+    nfields = length(fields)
+
+    # grab from input vectors using an index
+    construct_expr = :(())
+    append!(construct_expr.args, [:(X[$(i)]) for i in 1:nfields])
+
+    q = quote
+        # construct from a fixed size array vector
+        convert{T <: $(geodesy_type), U <: Real}(::Type{T}, X::Vec{$(nfields), U}) = add_param(T)($(construct_expr.args...))
+        call{T <: $(geodesy_type), U <: Real}(::Type{T}, X::Vec{$(nfields), U}) = convert(T, X)
+
+        # construct from a Vector
+        convert{T <: $(geodesy_type), U <: Real}(::Type{T}, X::Vector{U}) = add_param(T)($(construct_expr.args...))
+        call{T <: $(geodesy_type), U <: Real}(::Type{T}, X::Vector{U}) = convert(T, X)
+
+        # attempt to create from a tuple
+        convert{T <: $(geodesy_type), U <: Tuple}(::Type{T}, X::U) = add_param(T)($(construct_expr.args...))
+        call{T <: $(geodesy_type), U <: Tuple}(::Type{T}, X::U) = convert(T, X)
+
+    end
+    return q
 end
 
 
@@ -532,7 +570,10 @@ function build_methods{geo_type}(::Type{geo_type}, fields=fieldnames(geo_type), 
     append!(qb.args, Geodesy.add_projection(geo_type).args)
 
     # add constructing vectors of these things from matrices
-    append!(qb.args, Geodesy.add_vector_construction(geo_type).args)
+    append!(qb.args, Geodesy.add_matrix_construction(geo_type).args)
+
+    # add creating them from Vecs, Vectors, and tuples
+    append!(qb.args, Geodesy.add_import_export(geo_type, fields).args)
 
     # NaN checks
     # append!(qb.args, Geodesy.add_nan_check(geo_type).args)

@@ -86,6 +86,7 @@ default_params{T <: LLA}(::Type{T}) = (UnknownDatum,)
 # trait style functions
 has_ellipse{T <: LLA}(::Type{T}) = Val{true}
 get_handler{T <: LLA}(::Type{T}) = GeodesyHandler
+has_alt{T <: LLA}(::Type{T}) = true
 
 
 
@@ -178,6 +179,7 @@ default_params{T <: LL}(::Type{T}) = (UnknownDatum,)
 # trait style functions
 has_ellipse{T <: LL}(::Type{T}) = Val{true}
 get_handler{T <: LL}(::Type{T}) = GeodesyHandler
+has_alt{T <: LL}(::Type{T}) = true
 
 
 
@@ -277,6 +279,7 @@ default_params{T <: ENU}(::Type{T}) = (UnknownRef, )
 has_ellipse{T <: ENU}(::Type{T}) = Val{true}
 has_refloc{T <: ENU}(::Type{T}) = Val{true}
 get_handler{T <: ENU}(::Type{T}) = GeodesyHandler
+has_alt{T <: ENU}(::Type{T}) = true
 
 
 #ENU(x, y) = ENU(x, y, 0.0)
