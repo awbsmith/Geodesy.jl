@@ -534,8 +534,8 @@ function add_import_export(geodesy_type, fields)
         call{T <: $(geodesy_type), U <: Real}(::Type{T}, X::Vector{U}) = convert(T, X)
 
         # attempt to create from a tuple
-        convert{T <: $(geodesy_type), U <: Tuple}(::Type{T}, X::U) = add_param(T)($(construct_expr.args...))
-        call{T <: $(geodesy_type), U <: Tuple}(::Type{T}, X::U) = convert(T, X)
+        convert{T <: $(geodesy_type), U}(::Type{T}, X::NTuple{$(nfields), U}) = add_param(T)($(construct_expr.args...))
+        call{T <: $(geodesy_type), U}(::Type{T}, X::NTuple{$(nfields), U}) = convert(T, X)
 
     end
     return q
