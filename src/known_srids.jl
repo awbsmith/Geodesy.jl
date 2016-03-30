@@ -66,13 +66,13 @@ for i = 1:size(known_srids,1)
     q = quote
     
         # constructor from type
-        #SRID(::Type{$(known_srids[i,1])}) = SRID{$(known_srids[i,2]), $(known_srids[i,3])}
-        SRID(::Type{$(known_srids[i,1])}) = SRID{:EPSG, $(known_srids[i,3])}         # want the above line but I'm bad at Julia
+        auth = symbol($(string(known_srids[i,2])))  # there must be an easier way to insert a raw symbol
+        SRID(::Type{$(known_srids[i,1])}) = SRID{auth, $(known_srids[i,3])}  
 
         # constructor from a point
         SRID(::$(known_srids[i,1])) = SRID($(known_srids[i,1]))
 
-        # add a get_srid method (this should add it to the TrSRIDType trait).  Is this a good thing?)
+        # add a get_srid method 
         get_srid(::Type{$(known_srids[i,1])}) = SRID($(known_srids[i,1]))
         get_srid(::$(known_srids[i,1])) = SRID($(known_srids[i,1]))
 

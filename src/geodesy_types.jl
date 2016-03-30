@@ -26,7 +26,7 @@ abstract  AbstractPackageHandler
 
 immutable UnknownHandler <: AbstractPackageHandler; end     # ????
 immutable GeodesyHandler <: AbstractPackageHandler; end     # for point handled in this package
-immutable Proj4Handler   <: AbstractPackageHandler; end     # for point handled by the Proj4 package
+
 
 # and a function to return them
 get_handler(X) = get_handler(typeof(X))
@@ -38,23 +38,28 @@ get_handler{T}(::Type{T}) = UnknownHandler
 # for the types
 ###############################
 
+abstract  GeodesyType
+
 # abstract form for world coordinates
-abstract  WorldPosition  <: FixedVectorNoTuple{3, Float64}  
+abstract  WorldPosition  <: GeodesyType
 
 # abstract form for world surface coordinates
-abstract  WorldSurfacePosition  <: FixedVectorNoTuple{2, Float64}
+abstract  WorldSurfacePosition <: WorldPosition 
+
+# Heights relative to something... (basis for a compound coordinate reference system)
+abstract  WorldHeight  <: WorldPosition
 
 # abstract form for local coordinates (needs a refernce to transform to world)
-abstract  LocalPosition  <: FixedVectorNoTuple{3, Float64}
+abstract  LocalPosition  <: GeodesyType
 
-# Heights relative to something... (basis for a compond coordinate reference system)
-abstract  WorldHeight <: Real
+
 
 # set up some helpers for the type methods
 has_ellipse{T}(::Type{T}) = Val{false}                               # set true if there's an ellipse in the parameterization
 has_refloc{T}(::Type{T})  = Val{false}                               # set true if there's an reference location in the parameterization
 has_srid{T}(::Type{T})    = Val{false}                               # set true if there's an srid in the parameterization
-has_geoid{T}(::Type{T})   = Val{false}                               # set true if there's a  geoid in the parameterization
+has_geoid{T}(::Type{T})   = Val{false}                               # set true if there's a geoid in the parameterization
+has_alt{T}(::Type{T})     = Val{false}                               # set true if there's an altitude coordinate of some kind
 
 # and default parameters 
 default_params{T}(::Type{T}) = error("Default parameters not supplied for type $(T). Please overload Geodesy.default_params()")
@@ -86,7 +91,7 @@ default_params{T <: LLA}(::Type{T}) = (UnknownDatum,)
 # trait style functions
 has_ellipse{T <: LLA}(::Type{T}) = Val{true}
 get_handler{T <: LLA}(::Type{T}) = GeodesyHandler
-has_alt{T <: LLA}(::Type{T}) = true
+has_alt{T <: LLA}(::Type{T}) = Val{true}
 
 
 
@@ -121,34 +126,6 @@ has_ellipse{T <: ECEF}(::Type{T}) = Val{true}
 get_handler{T <: ECEF}(::Type{T}) = GeodesyHandler
 
 
-"""
-Points with a full coordinate reference system as defined by an SRID identifier (converions will use Proj4)
-
-Its up to the user to determine the what the x / y / z fields actually represent; which is governed by the element order in Proj4
-
-For a quick reference:
-    lat long style CRS's,  x -> lon, y -> lat (or get_lat() and get_lon())
-    utm style CRS's,  x -> false east, y -> false north, z -> up (or get_east() get_north() get_up())
-"""
-immutable CRS{T <: AbstractSRID} <: WorldPosition
-    x::Float64
-    y::Float64
-    z::Float64
-end
-
-# useful shortcuts
-typealias CRS_NULL CRS{UnknownSRID}
-
-default_params{T <: CRS}(::Type{T}) = (UnknownSRID,) 
-
-
-# trait style functions
-has_srid{T <: CRS}(::Type{T}) = Val{true}
-get_handler{T <: CRS}(::Type{T}) = Proj4Handler
-
-
-
-
 
 
 ##########################
@@ -179,7 +156,7 @@ default_params{T <: LL}(::Type{T}) = (UnknownDatum,)
 # trait style functions
 has_ellipse{T <: LL}(::Type{T}) = Val{true}
 get_handler{T <: LL}(::Type{T}) = GeodesyHandler
-has_alt{T <: LL}(::Type{T}) = true
+has_alt{T <: LL}(::Type{T}) = Val{true}
 
 
 
@@ -205,40 +182,6 @@ default_params{T <: GeoidHeight}(::Type{T}) = (:(error("Always specify a geoid w
 
 has_geoid{T <: GeoidHeight}(::Type{T}) = Val{true}  # trait style functions
 get_handler{T <: GeoidHeight}(::Type{T}) = Proj4Handler
-
-
-
-
-######################################################################################
-### Experimental, compound coordinate reference systems (CCRS)                        ###
-### Its not intended to work with these, just transform them to/from other types   ###    
-######################################################################################
-
-"""
-Abstract type for compound coordinate reference system (i.e. height is not ellipsoidal)
-"""
-abstract AbstractCCRS{T, U} <: WorldPosition
-
-# use the SRID style because we need to Proj4 to handle the Geoid anyway
-"""
-Compound coordinate reference system where the height is relative to a geoid
-"""
-immutable CCRS_Geoid{T <: AbstractSRID, U <: AbstractGeoid} <: AbstractCCRS{T, U}
-    x::Float64
-    y::Float64
-    z::Float64
-    #z::GeoidHeight{U}
-end
-
-default_params{T <: CCRS_Geoid}(::Type{T}) = (UnknownSRID, 
-                                              UnknownGeoid)   
-
-# trait style functions
-has_srid{T <: CCRS_Geoid}(::Type{T}) = Val{true}
-has_geoid{T <: CCRS_Geoid}(::Type{T}) = Val{true}
-get_handler{T <: CCRS_Geoid}(::Type{T}) = Proj4Handler
-
-
 
 
 ###############################
@@ -279,7 +222,7 @@ default_params{T <: ENU}(::Type{T}) = (UnknownRef, )
 has_ellipse{T <: ENU}(::Type{T}) = Val{true}
 has_refloc{T <: ENU}(::Type{T}) = Val{true}
 get_handler{T <: ENU}(::Type{T}) = GeodesyHandler
-has_alt{T <: ENU}(::Type{T}) = true
+has_alt{T <: ENU}(::Type{T}) = Val{true}
 
 
 #ENU(x, y) = ENU(x, y, 0.0)

@@ -8,7 +8,7 @@ module Geodesy
 using FixedSizeArrays
 using Proj4  
 
-import Base.show, Base.call, Base.convert, Base.+, Base.-, Base.isnan
+import Base.show, Base.call, Base.convert, Base.+, Base.-, Base.isnan, Base.getindex
 
 export
 
@@ -120,7 +120,9 @@ export
     =#
 
 
-for f in ["datums", "ellipsoids", "srids", "geodesy_types", "known_srids", "utm", "type_methods", "transform", "bounds", "vicenty", "distance", "external"]
+for f in ["datums", "ellipsoids", "srid", "geodesy_types", "known_srids", "utm", "math_funcs", "type_methods", "transform", "external",  
+          "bounds", "vicenty", "distance",                                                          # do these belong here?
+          "Proj4_Types/proj4_types", "Proj4_Types/projections", "Proj4_Types/proj4_transforms"]     # these definitely don't
     include("$f.jl")
 end
 

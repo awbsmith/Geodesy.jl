@@ -1,7 +1,7 @@
+
+# can I make other packages add to this list?
 GeodesyTypes = [LLA,
                 ECEF,
-                CRS,
-                CCRS_Geoid,
                 LL,
                 ENU]
 
@@ -24,8 +24,24 @@ add_param{T}(::Type{T}) = T
 add_param{T}(::Type{T}, X) = T
 
 
-# by default point aren't lla
-has_alt{T}(::Type{T}) = false
+
+###################################################################
+# Function to add an integer indexing method for the geodesy types
+###################################################################
+
+
+# and get index methods to each type
+function add_indexing{geodesy_type}(::Type{geodesy_type})
+    if geodesy_type <: FixedArray
+        q = quote; end  # no need for subtypes of this
+    else
+        q = quote
+            # access by index
+            @inline getindex{T <: $(geodesy_type)}(x::T, i::Integer) = x.(i)
+        end
+    end
+end
+
 
 
 ##############################################################
@@ -309,62 +325,6 @@ end
 
 
 #####################################################
-# add basic maths to the point type
-#####################################################
-
-function add_maths{geodesy_type}(::Type{geodesy_type}, fields)
-
-    nf = length(fields)  # number of fields and their names for the Geodesy variables
-
-    # allow interaction with these types
-    interact_types = [Vec{nf}, Vector]  
-
-    # create an expression to add to
-    q = quote end
-
-    # and build (N.B. template functions keep clashing with FixedSizeArrays, so dont use them)
-    for iT in interact_types
-
-        if (nf == 2)
-            qn = quote
-                
-                # addition 
-                +(X::$(geodesy_type), dX::$(iT)) = typeof(X)(X.$(fields[1]) + dX[1], X.$(fields[2]) + dX[2])
-                # +(dX::$(iT), X::$(geodesy_type)) = typeof(X)(X.$(fields[1]) + dX[1], X.$(fields[2]) + dX[2])  # should this version be a thing? Cant avoid a clash with FSA anyway...
-
-                # subtraction
-                -(X::$(geodesy_type), dX::$(iT)) = typeof(X)(X.$(fields[1]) - dX[1], X.$(fields[2]) - dX[2])
-
-                # NaN
-                isnan(X::$(geodesy_type)) = Vec{2, Bool}(isnan(X.$(fields[1])),   isnan(X.$(fields[2])))
-                
-            
-            end
-        elseif (nf == 3)
-            qn = quote
-
-                # addition 
-                +(X::$(geodesy_type), dX::$(iT)) = typeof(X)(X.$(fields[1]) + dX[1], X.$(fields[2]) + dX[2], X.$(fields[3]) + dX[3])
-                # +(dX::$(iT), X::$(geodesy_type)) = typeof(X)(X.$(fields[1]) + dX[1], X.$(fields[2]) + dX[2], X.$(fields[3]) + dX[3])   # should this version be a thing? Cant avoid a clash with FSA anyway...
-
-                # subtraction
-                -(X::$(geodesy_type), dX::$(iT)) = typeof(X)(X.$(fields[1]) - dX[1], X.$(fields[2]) - dX[2], X.$(fields[3]) - dX[3])
-
-                # NaN
-                isnan(X::$(geodesy_type)) = Vec{3, Bool}(isnan(X.$(fields[1])), isnan(X.$(fields[2])), isnan(X.$(fields[3])))
-            end
-        else
-            qn = quote end
-        end
-        append!(q.args, qn.args)  # include them
-    end
-    
-    return q
-
-end
-
-
-#####################################################
 # Make the constructors force typing
 #####################################################
 
@@ -400,7 +360,7 @@ function add_constructors{geodesy_type}(::Type{geodesy_type})
     append!(q.args, qn.args)
 
     # if this is an lla type, for legacy reasons we allow construction with / without the height parameter
-    if has_alt(geodesy_type)
+    if has_alt(geodesy_type) == Val{true}
         if (nfields == 3)
             qn = quote  # construct it wihtout the height input
                 call{T <: $(geodesy_type)}(::Type{T}, $(lhs_expr.args[1:2]...)) = add_param(T)($(rhs_expr.args[1:2]...), 0.0)
@@ -524,18 +484,31 @@ function add_import_export(geodesy_type, fields)
     construct_expr = :(())
     append!(construct_expr.args, [:(X[$(i)]) for i in 1:nfields])
 
+    export_expr = :(())
+    append!(export_expr.args, [:(X.$(fields[i])) for i in 1:nfields])
+
     q = quote
+        
         # construct from a fixed size array vector
         convert{T <: $(geodesy_type), U <: Real}(::Type{T}, X::Vec{$(nfields), U}) = add_param(T)($(construct_expr.args...))
-        call{T <: $(geodesy_type), U <: Real}(::Type{T}, X::Vec{$(nfields), U}) = convert(T, X)
 
         # construct from a Vector
         convert{T <: $(geodesy_type), U <: Real}(::Type{T}, X::Vector{U}) = add_param(T)($(construct_expr.args...))
-        call{T <: $(geodesy_type), U <: Real}(::Type{T}, X::Vector{U}) = convert(T, X)
 
-        # attempt to create from a tuple
+        # construct from a tuple
         convert{T <: $(geodesy_type), U}(::Type{T}, X::NTuple{$(nfields), U}) = add_param(T)($(construct_expr.args...))
-        call{T <: $(geodesy_type), U}(::Type{T}, X::NTuple{$(nfields), U}) = convert(T, X)
+
+        # export to a fixed size array vector
+        convert(::Type{Vec}, X::$(geodesy_type)) = Vec{$(nfields), Float64}($(export_expr.args...))
+        convert{U <: Real}(::Type{Vec{$(nfields), U}}, X::$(geodesy_type)) = Vec{$(nfields), U}($(export_expr.args...))
+        call(::Type{Vec}, X::$(geodesy_type)) = convert(Vec, X)
+        call{U <: Real}(::Type{Vec{$(nfields), U}}, X::$(geodesy_type)) = convert(Vec{$(nfields), U}, X)
+
+        # export to a vector
+        convert(::Type{Vector}, X::$(geodesy_type)) = vcat($(export_expr.args...))
+
+        # export to a tuple
+        convert(::Type{NTuple}, X::$(geodesy_type)) = $(export_expr.args)
 
     end
     return q
@@ -553,6 +526,9 @@ function build_methods{geo_type}(::Type{geo_type}, fields=fieldnames(geo_type), 
 
     # create a code block to amalgamate all the othe code blocks
     qb = Expr(:block)
+
+    # add indexing method
+    append!(qb.args, Geodesy.add_indexing(geo_type).args)
 
     # add accessor functions
     append!(qb.args, Geodesy.add_accessors(geo_type, fields).args)

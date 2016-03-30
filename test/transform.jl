@@ -98,7 +98,7 @@ lla_ref_wh = LLA_WGS84(-71.09183, 42.36299, 10.0)
 
 # ENU -> LLA
 @xyz_approx_eq_eps LLA(enu, lla_ref) lla 1e-8
-@xyz_approx_eq_eps LLA(ENU{lla_ref}(enu...)) lla 1e-8
+@xyz_approx_eq_eps LLA(ENU{lla_ref}(enu[1], enu[2], enu[3])) lla 1e-8
 
 # Bounds{LLA} -> Bounds{ENU}
 bounds = Bounds{LLA_WGS84}(-71.1, -71.094, 42.365, 42.3695)
@@ -119,16 +119,16 @@ ecef_ref = ECEF_WGS84(1529073.1560519305, -4465040.019013103, 4275835.339260309)
 @test Geodesy.proj4_str(SRID(ECEF_WGS84)) == "+proj=geocent +datum=WGS84 +units=m +no_defs"
 
 # and make sure they behave as anticipated
-lla_crs = CRS{SRID(lla)}(lla...)
-ecef_crs = CRS{SRID(ecef_ref)}(ecef_ref...)
+lla_crs = CRS{SRID(lla)}(lla[1], lla[2], lla[3])
+ecef_crs = CRS{SRID(ecef_ref)}(ecef_ref[1], ecef_ref[2], ecef_ref[3])
 
 # Non SRID -> SRID
 @xyz_approx_eq_eps CRS{SRID(ecef_ref)}(lla_crs) ecef_ref 1e-8
 @xyz_approx_eq_eps CRS{SRID(lla)}(ecef_crs) lla 1e-8
 
 # SRID -> Non SRID
-@xyz_approx_eq_eps ECEF(LLA{WGS84}(lla_crs...)) ECEF{WGS84}(lla) 1e-8
-@xyz_approx_eq_eps ECEF{WGS84}(ecef_crs...) ecef_ref 1e-8
+@xyz_approx_eq_eps ECEF(LLA{WGS84}(lla_crs[1], lla_crs[2], lla_crs[3])) ECEF{WGS84}(lla) 1e-8
+@xyz_approx_eq_eps ECEF{WGS84}(ecef_crs[1], ecef_crs[2], ecef_crs[3]) ecef_ref 1e-8
 
 
 #######################################
