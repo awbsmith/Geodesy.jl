@@ -225,8 +225,7 @@ Template parameters for the different types are useful in that they save passing
 
 
     # and check the result
-    using FixedSizeArrays
-    dX = Vec(ecef_known_datum) - Vec(ecef_unknown_datum)  # convert to Vec because they're different types
+    dX = Vector(ecef_known_datum) - Vector(ecef_unknown_datum)  # convert to Vec because they're different types
     @printf("%0.19g", norm(dX))
 
 ```
