@@ -114,7 +114,7 @@ geoid_file(::Type{AusGeoid09}) = "ausgeoid09.gtx"
 # function to get a list of all datums
 function get_datums(datum::DataType=AbstractDatum, super::ASCIIString="", out=Vector{ASCIIString}(0))
     sub_datums = subtypes(datum)
-    if (length(sub_datums) > 0)
+    if (length(sub_datums) > 0) 
         for sd in sub_datums
             out = get_datums(sd, datum==AbstractDatum ? "" : " (" * string(datum) * ")", out)
         end

@@ -10,16 +10,18 @@ function geotransform{T,U}(::Type{T}, X::U, ::Type{Proj4Handler}, ::Type{Proj4Ha
     if (T == U)
         out = T(getX(X), getY(X), getZ(X))
     else
-        Y = Proj4.transform(get_projection(U), get_projection(T), [getX(X), getY(X), getZ(X)])
-        out = T(Y[1], Y[2], Y[3])
+        v = [getX(X), getY(X), getZ(X)]
+        Proj4.transform!(get_projection(U), get_projection(T), v, false)
+        out = T(v[1], v[2], v[3])
     end
 end
 
 
 # CRS{SRID} -> CRS{SRID}, with srids specified by an extra variable (output SRID, input SRID)
 function geotransform{T, U, S1, S2}(::Type{T}, X::U, srids::Tuple{S1, S2}, ::Type{Proj4Handler}, ::Type{Proj4Handler}) 
-    Y = Proj4.transform(get_projection(srids[2]), get_projection(srids[1]), [getX(X), getY(X), getZ(X)])
-    out = CRS{UnknownSRID}(Y[1], Y[2], Y[3])
+    v = [getX(X), getY(X), getZ(X)]
+    Proj4.transform!(get_projection(srids[2]), get_projection(srids[1]), v)
+    out = CRS{UnknownSRID}(v[1], v[2], v[3])
 end
 
 
@@ -30,15 +32,17 @@ function geotransform{T, U}(::Type{T}, X::U, ::Type{Proj4Handler}, ::Type{Geodes
     if false # get_srid(oT) == get_srid(U)  # not valid since the geoid addition
         out = oT(getX(X), getY(X), getZ(X))  # not actually a geotransform.  Should probably be a convert method?
     else
-        Y = Proj4.transform(get_projection(U), get_projection(oT), [getX(X), getY(X), getZ(X)], false)    
-        out = oT(Y[1], Y[2], Y[3])
+        v = [getX(X), getY(X), getZ(X)]
+        Proj4.transform!(get_projection(U), get_projection(oT), v, false)    
+        out = oT(v[1], v[2], v[3])
     end
 end
 
 # X -> CRS{SRID}, with srids specified by an extra variable (output SRID, input SRID)
 function geotransform{T, U, S1, S2}(::Type{T}, X::U, srids::Tuple{S1, S2}, ::Type{Proj4Handler}, ::Type{GeodesyHandler})
-    Y = Proj4.transform(get_projection(srids[2]), get_projection(srids[1]), [getX(X), getY(X), getZ(X)], false)    
-    out = CRS{UnknownSRID}(Y[1], Y[2], Y[3])
+    v = [getX(X), getY(X), getZ(X)]
+    Proj4.transform!(get_projection(srids[2]), get_projection(srids[1]), v, false)    
+    out = CRS{UnknownSRID}(v[1], v[2], v[3])
 end
 
 # CRS{SRID} -> X
@@ -47,15 +51,17 @@ function geotransform{T, U}(::Type{T}, X::U, ::Type{GeodesyHandler}, ::Type{Proj
     if false # get_srid(oT) == get_srid(U)  # not valid since the geoid addition
         out = oT(getX(X), getY(X), getZ(X))  # not actually a geotransform.  Should probably be a convert method?
     else
-        Y = Proj4.transform(get_projection(U), get_projection(oT), [getX(X), getY(X), getZ(X)], false)    
-        out = oT(Y[1], Y[2], Y[3])
+        v = [getX(X), getY(X), getZ(X)]
+        Proj4.transform!(get_projection(U), get_projection(oT), v, false)    
+        out = oT(v[1], v[2], v[3])
     end
 end
 
 # # CRS{SRID} -> X
 function geotransform{T, U, S1, S2}(::Type{T}, X::U, srids::Tuple{S1, S2}, ::Type{GeodesyHandler}, ::Type{Proj4Handler})
-    Y = Proj4.transform(get_projection(srids[2]), get_projection(srids[1]), [getX(X), getY(X), getZ(X)], false)    
-    out = CRS{UnknownSRID}(Y[1], Y[2], Y[3])
+    v = [getX(X), getY(X), getZ(X)]
+    Proj4.transform!(get_projection(srids[2]), get_projection(srids[1]), v, false)    
+    out = CRS{UnknownSRID}(v[1], v[2], v[3])
 end
 
 

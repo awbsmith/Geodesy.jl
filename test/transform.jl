@@ -4,6 +4,8 @@ using Base.Test
 using Compat
 using FixedSizeArrays
 
+#TODO: Break this up / serious rewrite
+
 #############################################
 ### Decimal <=> Degrees, Minutes, Seconds ###
 #############################################
@@ -69,6 +71,16 @@ macro z_approx_eq_eps(a, b, eps)
         @test_approx_eq_eps getZ($(esc(a))) getZ($(esc(b))) $(esc(eps))
     end
 end
+
+################################################
+### Testing parameter stripping and addition ###
+################################################
+
+lla_wgs84 = LLA_WGS84(-71.0960, 42.3673, 0)
+lla_null = LLA_NULL(-71.0960, 42.3673, 0)
+@xyz_approx_eq convert(LLA_NULL, lla_wgs84) lla_null
+@xyz_approx_eq convert(LLA{WGS84}, lla_null) lla_wgs84
+
 
 ###################################
 ### Testing fixed relationships ###

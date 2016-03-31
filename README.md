@@ -4,6 +4,50 @@
 
 The Geodesy package implements geodetic transformations bewteen various coordinate systems. 
 
+### Quick Guide
+
+```julia
+# start with a GPS coordinate, which is a [longitude, latitude, altitude] (LLA) location in the WGS84 datum
+lla_src = LLA{WGS84}(.1167, 51.5, 0.0)
+# = Geodesy.LLA{WGS84} 
+#     lon: Float64 0.1167
+#     lat: Float64 51.5
+#     alt: Float64 0.0
+
+
+# define a destination GPS coordinate
+lla_dest = LLA{WGS84}(0.11706002390375786,51.500449405987546,0.00024498533457517624)
+
+# convert them to Earth Centered Earth Fixed corrdinates (a Cartesian cordinate system)
+ecef_src = ECEF(lla_src)
+
+# transform the destination into a coordinate frame centered at the source location, and with axis directions East, North, and Up (ENU)
+# (this basically gives a direction from lla_src to lla_dest)
+enu_dest = ENU(lla_dest, lla_src)
+# = Geodesy.ENU{Geodesy.UnknownRef} 
+#        east:  Float64 25.00000000000066
+#        north: Float64 49.99999999967102
+#        up:    Float64 -3.318305630273244e-10
+
+# show the datums and subtypes of datums known to this package
+get_datums()
+#=    "ED50 (StaticDatum)"                   
+#     "NAD27 (StaticDatum)"                  
+#     "OSGB36 (StaticDatum)"                 
+#     "WGS84 (StaticDatum)"                  
+#     "ETRS89 (DynDatum)"                    
+#     "GDA94 (DynDatum)"                     
+#     "NAD83 (DynDatum)"                     
+#     "UnknownDatum"
+#     "AIRY_ELLIPSE (Ellipse)"               
+#     "CLARKE66_ELLIPSE (Ellipse)"           
+#     "CustomEllipse{T<:Ellipsoid} (Ellipse)"
+#     "GRS80_ELLIPSE (Ellipse)"              
+#     "HAYFORD_ELLIPSE (Ellipse)"            
+#     "WGS84_ELLIPSE (Ellipse)"              
+```
+More detailed usage is given below
+
 
 ### Terminology
 
@@ -55,59 +99,207 @@ Comparing points in two different datums requires knowing the transformation to 
 
 ### Transformations vs Conversions
 
-1. `convert` is used for value preserving transformations, e.g. change the position's type to include the coordinate reference system:
-```julia
-    lla_wgs84 = LLA{WGS84}(0.0,0.0,0.0)                                       # position in the LLA coordinate system using the WGS84 reference ellipsoid.  Note multiple datums use the WGS84 ellipse.
-    lla_wgs84_srid = SRID(LLA{WGS84})                                         # define the coordinate reference system for the WGS84 datum with LLA coordinate system
-    convert(CRS{lla_wgs84_srid}, lla_wgs84) # = CRS{EPSG4326}(0.0,0.0,0.0)    # the position is the same!
-```
-    `convert` will / should not change values!
-
-2. `geotransform` is used for value modifying transformations, e.g.:
+1. `geotransform` is used for value modifying transformations, e.g.:
 ```julia
     lla_wgs84 = LLA{WGS84}(0.0,0.0,0.0)
     geotransform(ECEF, lla_wgs84) # = ECEF{WGS84}(6.378137e6,0.0,0.0)
 ```
 
 
+2. `convert` is used for value preserving transformations, e.g. change the position's type to include the coordinate reference system:
+```julia
+    lla_wgs84 = LLA{WGS84}(0.0,0.0,0.0)  # position in the LLA coordinate system using the WGS84 reference ellipsoid.  Note multiple datums use the WGS84 ellipse.
+    lla_wgs84_srid = SRID(LLA{WGS84})    # define the coordinate reference system for the WGS84 datum with LLA coordinate system
+
+    # the position is the same!    
+    convert(CRS{lla_wgs84_srid}, lla_wgs84) # = CRS{EPSG4326}(0.0,0.0,0.0)    
+```
+`convert` will / should not change values!
+
+Type constructors are overloaded to use the `geotransform` function where applicable
+
+
 ### Examples
 
-##### Convert between "Coordinate System" types
+##### Basic Usage
 
 ```julia
 
-# start with an LLA point
-lla_wgs84 = LLA{WGS84}(.1167, 51.5, 0.0)
+# start with an [longitude, latitude, altitude] (LLA) location in the WGS84 datum (i.e. a GPS coordinate)
+lla_src = LLA{WGS84}(.1167, 51.5, 0.0)
 
-# convert to a Cartesian coordinate frame
-ecef_wgs84 = geotransform(ECEF, lla_wgs84)   # or equivilently:
-ECEF(lla_wgs84)
+# define a destination GPS coordinate
+lla_dest = LLA{WGS84}(0.11706002390375786,51.500449405987546,0.00024498533457517624)
 
-# convert to a local coordinate frame
-lla_ref = LLA{WGS84}(.1168, 51.5, 0.0)  # center the local frame on this point
-enu_wref = geotransform(ENU{lla_ref}, lla_wgs84)    # = ENU{LL{WGS84}(0.1168,51.5)}(-6.944051663969915,4.742430141962267e-6,-3.772299267203877e-6)
-enu_noref = geotransform(ENU, lla_wgs84, lla_ref)   # = ENU{???}(-6.944051663969915,4.742430141962267e-6,-3.772299267203877e-6)
+# Transform them both into a Cartesian Earth Centered Earth Fixed (ECEF) frame
+ecef_src = ECEF(lla_src)
+# = Geodesy.ECEF{WGS84} 
+#     x: Float64 3.9786402778542214e6
+#     y: Float64 8103.702688750244
+#     z: Float64 4.968362457291028e6
+ecef_dest = ECEF(lla_src)
 
-# convert from the local coordinate frame to the LLA coordinate frame
-lla = geotransform(LLA, enu_wref)              # =LLA{WGS84}(.1167, 51.5, 0.0)
-lla = geotransform(LLA, enu_noref, lla_ref)    # =LLA{WGS84}(.1167, 51.5, 0.0)
+
+# transform the destination into a coordinate frame centered at the source location, and with axis direction East, North, and Up (ENU)
+# (this gives a direction from lla_src to lla_dest)
+enu_dest = ENU(lla_dest, lla_src)
+# = Geodesy.ENU{Geodesy.UnknownRef} 
+#        east:  Float64 25.00000000000066
+#        north: Float64 49.99999999967102
+#        up:    Float64 -3.318305630273244e-10
+
 ```
 
+##### Advanced Usage 
 
 
-##### Convert a point in a specified SRID to a "Coordinate System" Type
+###### Use a "Coordinate Reference System" type to represent a coordinate reference system specified by an SRID
 
 ```julia
 
-# create a point in a coordinate reference system
-srid = SRID{:EPSG, 32755}                                                        # WGS84 datum [UTM](https://en.wikipedia.org/wiki/Universal_Transverse_Mercator_coordinate_system) zone 55 South
-utm = CRS{srid}(573105.43200000003, 086900.3839999996, 277.42700000000002)       # a point in the above zone
+# create a point in a coordinate reference system specified by an SRID
+srid = SRID{:EPSG, 32755}                                                        # [WGS84 datum UTM zone 55 South](https://epsg.io/32755)
+X_utm = CRS{srid}(573105.43200000003, 086900.3839999996, 277.42700000000002)     # a point in the above coordinate system
 
-# convert to a coordinate sytem type
-lla_wgs84 = geotransform(LLA{WGS84}, utm)                                 # the SRID corresponding to LLA{WGS84} is known to Geodesy (see known_srids.jl).  Otherwise, 
-lla_wgs84 = convert(LLA{WGS84}, geotransform(SRID{:EPSG, 4326}, utm))     # EPSG4326 is the SRID for for the WGS84 LLA coordinate reference system
+# convert to a "known" type
+lla_wgs84 = geotransform(LLA{WGS84}, X_utm)                                      # the SRID corresponding to LLA{WGS84} is known to Geodesy (see known_srids.jl).  
+
+# the above line is a convenient way to perform the steps
+Xo = geotransform(CRS{SRID{:EPSG, 4326}}, X_utm)                                 # SRID{:EPSG, 4326} corresponds to [LLA with a WGS84 datum](https://epsg.io/4326)
+lla_wgs84 = convert(LLA{WGS84}, Xo)                                              # a value presere type conversion
+
 
 ```
+
+###### Change the backend package used to perform a conversion
+
+```julia
+
+    # do a geotransformation the usual way
+    lla = LLA{WGS84}(.1167, 51.5, 0.0)
+    ecef = geotransform(ECEF{WGS84}, lla)
+
+    # now make the Proj4 package do the conversion, by specifying the type handlers in the function inputs 
+    # Note that Proj4 will perfrom the transform is either src or dest used the Proj4 Handler
+    ecef_proj4 = geotransform(ECEF{WGS84}, lla, Geodesy.Proj4Handler, Geodesy.Proj4Handler)  # order is dest handler, then source handler
+
+    # how different is the result?
+    dX = ecef - ecef_proj4
+    @printf("%0.19g", norm(dX))
+
+```
+
+
+###### Exploring Template Parameter Usage
+
+The usual style in this package is to use template parameters to supply an extra argument to the `geotransform` function.  
+
+Template parameters for the different types are useful in that they save passing information throughout your code, but can cause issues surrounding type stability, or when you use so many different template parameters that you'll kill Julia's type system.
+
+####### Datum template parameter example:
+
+```julia
+
+    # create an LLA points with a known datum
+    lla_known_datum = LLA{WGS84}(.1167, 51.5, 0.0)
+
+    # the transformation to ECEF require parameters for the datum's ellipse
+    # When we use the templated version: 
+    ecef_known_datum = geotransform(ECEF, lla_known_datum)
+    # Geodesy.ECEF{WGS84} 
+    #      x: Float64 3.9786402778542214e6
+    #      y: Float64 8103.702688750244
+    #      z: Float64 4.968362457291028e6
+    #
+    # the ellipse parameters are added to the function inputs, making the above line equivilent to:
+    ecef_known_datum = geotransform(ECEF, lla_known_datum, Geodesy.ellipsoid(typeof(lla_known_datum)))
+
+    # we can use non-templated version by specifying the ellipse manually
+    lla_unknown_datum = LLA(.1167, 51.5, 0.0)
+    ellipse = Geodesy.eWGS84  # WGS84 ellipse parameters (N.B. Geodesy.Ellipsoid(...) can be used to create custom ellipsoids)
+    ecef_unknown_datum = geotransform(ECEF, lla_unknown_datum, ellipse)
+    # = Geodesy.ECEF{Geodesy.UnknownDatum} 
+    #      x: Float64 3.9786402778542214e6
+    #      y: Float64 8103.702688750244
+    #      z: Float64 4.968362457291028e6
+
+
+    # and check the result
+    using FixedSizeArrays
+    dX = Vec(ecef_known_datum) - Vec(ecef_unknown_datum)  # convert to Vec because they're different types
+    @printf("%0.19g", norm(dX))
+
+```
+
+####### Reference point template parameter example:
+
+```julia
+
+    # create two LLA points
+    lla_ref = LLA{WGS84}(.1167, 51.5, 0.0)
+    lla_dest = LLA{WGS84}(0.11706002390375786,51.500449405987546,0.00024498533457517624)
+
+    # when we transform to a local reference frame, the default behaviour is not to add the reference point to the output type
+    # so the reference point must be added to the function call
+    enu_noref = geotransform(ENU, lla_dest, lla_ref)
+    # = Geodesy.ENU{Geodesy.UnknownRef} 
+    #      east: Float64 25.00000000000066
+    #      north: Float64 49.99999999967102
+    #      up: Float64 -3.318305630273244e-10
+
+    
+    # we can specify the reference point in the ENU type
+    enu_ref = geotransform(ENU{lla_ref}, lla_dest)
+    # = Geodesy.ENU{Geodesy.LLA{WGS84}(0.1167,51.5,0.0)} 
+    #             east: Float64 25.00000000000066
+    #             north: Float64 49.99999999967102
+    #             up: Float64 -3.318305630273244e-10
+
+    # which means we don't have to supply the reference point in later conversions
+    lla_out = geotransform(LLA, enu_ref)
+
+```
+
+
+####### SRID template parameter example:
+
+```julia
+
+    # start off by defining a source and destination coordinate reference system by their SRID
+    srid_src = SRID{:EPSG, 4326}   # corresponds to LLA{WGS84}
+    srid_dest = SRID{:EPSG, 4978}  # corresponds to ECEF{WGS84}
+
+    # and create a point
+    X = CRS{srid_src}(.1167, 51.5, 0.0)
+
+    # when we perform the transformation, the SRID information gets added as an extra parameter to the transformtion function,
+    # so
+    Xo = geotransform(CRS{srid_dest}, X)
+    # = Geodesy.CRS{EPSG4978} 
+    #    x: Float64 3.9786402778542214e6
+    #    y: Float64 8103.702688750244
+    #    z: Float64 4.968362457291028e6
+    #
+    # is equivilent to: 
+    Xo = geotransform(CRS{srid_dest}, X, (srid_dest, srid_src))
+    # = Geodesy.CRS{Geodesy.UnknownSRID} 
+    #     x: Float64 3.9786402778542214e6
+    #     y: Float64 8103.702688750244
+    #     z: Float64 4.968362457291028e6
+
+    
+    # so we can do the above without using the template parameters
+    X_noref = CRS(.1167, 51.5, 0.0)
+    Xo_noref = geotransform(CRS, X_noref, (srid_dest, srid_src))
+    # = Geodesy.CRS{Geodesy.UnknownSRID} 
+    #     x: Float64 3.9786402778542214e6
+    #     y: Float64 8103.702688750244
+    #     z: Float64 4.968362457291028e6
+
+```
+    
+
+
 
 ##### Perform transformations on custom types
 
@@ -194,23 +386,25 @@ As a result the ECEF point type used in this package is simply a Cartesian coord
 As an example:
 
 ```julia
-lla_osgb36 = LLA{Geodesy.OSGB36}(0, 0, 0)                  # OSGB36 is a good match to the Earth in the UK but not elsewhere, and is not centered on the Earth's center of mass (i.e. not a [geocentric datum](http://support.esri.com/en/knowledgebase/GISDictionary/term/geocentric%20datum))
-cart = geotransform(ECEF, lla_osgb36)                      # = 6.377563396e6, 0.0, 0.0
+lla_osgb36 = LLA{Geodesy.OSGB36}(0, 0, 0)      # OSGB36 is a good match to the Earth in the UK but not elsewhere, and is not centered on the Earth's center of mass (i.e. not a [geocentric datum](http://support.esri.com/en/knowledgebase/GISDictionary/term/geocentric%20datum))
+ecef_geodesy = geotransform(ECEF, lla_osgb36)
+# = Geodesy.ECEF{OSGB36} 
+#     x: Float64 6.377563396e6
+#     y: Float64 0.0
+#     z: Float64 0.0
+                      
 
-# we can compare the above to the ECEF position using the WGS84 datum (a geocentric datum)
-ecef_crs = geotransform(SRID(ECEF{WGS84}), lla_osgb36)     # = 6.377879171552554e6,-99.12039106890559, 534.423089412207
-ecef = convert(ECEF{WGS84}, ecef_crs)                      # convert to a type native to this package (type conversion not a transformation)
+# we can compare the above to the ECEF position as calculated by the Proj4 package
+ecef_proj4 = geotransform(ECEF{WGS84}, lla_osgb36, Geodesy.Proj4Handler, Geodesy.Proj4Handler)                      # convert to a type native to this package (type conversion not a transformation)
+# = Geodesy.ECEF{WGS84} 
+#      x: Float64 6.377879171552554e6
+#      y: Float64 -99.12039106890559
+#      z: Float64 534.423089412207
 
-# or equivilently
-srid = SRID(lla_osgb36)
-lla_crs = convert(CRS{srid}, lla_osgb36)                   # type conversion not a transformation
-geotransform(ECEF{WGS84}, lla_crs)                         # = 6.377879171552554e6,-99.12039106890559, 534.423089412207
 
 # the difference
 dist = norm(Vector(cart) - Vector(ecef))                   # = 628.6072621385788
 
-# which is why we cant do this directly
-cart - ecef # = error
 
 
 ```

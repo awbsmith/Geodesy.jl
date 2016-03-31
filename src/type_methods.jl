@@ -328,7 +328,9 @@ end
 # Make the constructors force typing
 #####################################################
 
-function add_constructors{geodesy_type}(::Type{geodesy_type})
+function add_constructors{geodesy_type}(::Type{geodesy_type}, fields)
+
+    nfields = length(fields)
 
     q = quote
 
@@ -338,12 +340,60 @@ function add_constructors{geodesy_type}(::Type{geodesy_type})
         call{T <: $(geodesy_type), U <: $(geodesy_type)}(::Type{T}, X::U) = geotransform(T, X, get_handler($(geodesy_type)), get_handler($(geodesy_type)))
 
     end
+    
+    #
+    # allow construction to convert from no datum to datum
+    #
+
+    # an expression to form a tuple from the type field
+    rhs_expr = :(())
+    append!(rhs_expr.args, [:(X.$(field)) for field in fields])
+
+    # default parameters
+    defaults = Geodesy.default_params(geodesy_type)
+    abstracts = [super(def) for def in defaults]
+
+    if (length(geodesy_type.parameters) == 1)
+        qn = quote
+            convert(::Type{$(geodesy_type){$(defaults[1])}}, X::$(geodesy_type){$(defaults[1])}) = X  # need this because it can't be resolved below 
+            convert{T <: $(abstracts[1])}(::Type{$(geodesy_type){T}}, X::$(geodesy_type){$(defaults[1])}) = $(geodesy_type){T}($(rhs_expr.args...))  # convert from the null parameter
+            convert{T <: $(abstracts[1])}(::Type{$(geodesy_type){$(defaults[1])}}, X::$(geodesy_type){T}) = $(geodesy_type){$(defaults[1])}($(rhs_expr.args...))  # convert to the null parameter
+        end
+        append!(q.args, qn.args)
+    elseif (length(geodesy_type.parameters) == 2)
+        qn = quote
+
+            # define some specifics to prevent ambiguities below
+            convert(::Type{$(geodesy_type){$(defaults[1]), $(defaults[2])}}, X::$(geodesy_type){$(defaults[1]), $(defaults[2])}) = X
+            convert{T <: $(abstracts[1])}(::Type{$(geodesy_type){T, $(defaults[2])}}, X::$(geodesy_type){T, $(defaults[2])}) = X
+            convert{U <: $(abstracts[2])}(::Type{$(geodesy_type){$(defaults[1]), U}}, X::$(geodesy_type){$(defaults[1]), U}) = X
+
+            # conversion to / from fully null parameters
+            convert{T <: $(abstracts[1]), U <: $(abstracts[2])}(::Type{$(geodesy_type){T, U}}, X::$(geodesy_type){$(defaults[1]), $(defaults[2])}) = 
+                $(geodesy_type){T, U}($(rhs_expr.args...))                            # convert from the null parameter
+            convert{T <: $(abstracts[1]), U <: $(abstracts[2])}(::Type{$(geodesy_type){$(defaults[1]), $(defaults[2])}}, X::$(geodesy_type){T,U}) = 
+                $(geodesy_type){$(defaults[1]), $(defaults[2])}($(rhs_expr.args...))  # convert to the null parameter
+
+            # conversion to / from when the 1st parameter is known
+            convert{T <: $(abstracts[1]), U <: $(abstracts[2])}(::Type{$(geodesy_type){T, U}}, X::$(geodesy_type){$(defaults[1]), U}) = 
+                $(geodesy_type){T, U}($(rhs_expr.args...))               # convert from the null parameter
+            convert{T <: $(abstracts[1]), U <: $(abstracts[2])}(::Type{$(geodesy_type){$(defaults[1]), U}}, X::$(geodesy_type){T,U}) = 
+                $(geodesy_type){$(defaults[1]), U}($(rhs_expr.args...))  # convert to the null
+
+            # conversion to / from when the 2nd parameter is known
+            convert{T <: $(abstracts[1]), U <: $(abstracts[2])}(::Type{$(geodesy_type){T, U}}, X::$(geodesy_type){T, $(defaults[2])}) = 
+                $(geodesy_type){T, U}($(rhs_expr.args...))  # convert from the null parameter
+            convert{T <: $(abstracts[1]), U <: $(abstracts[2])}(::Type{$(geodesy_type){T, $(defaults[2])}}, X::$(geodesy_type){T,U}) = 
+                $(geodesy_type){T, $(defaults[2])}($(rhs_expr.args...))  # convert to the null
+
+        end
+        append!(q.args, qn.args)
+    end
 
     #
     # construction from scalars
     #
-    fields = fieldnames(geodesy_type)
-    nfields = length(fields)
+
     
     # create an expression for a tuple x1, x2, x3...
     rhs_expr = :(())
@@ -385,14 +435,24 @@ end
 function add_cross_constructors{type_1, type_2}(::Type{type_1}, ::Type{type_2})
 
     #h1, h2 = get_handler(type_1), get_handler(type_2)
-    quote
+    qb = quote
         
         # no reference point
         call{T <: $(type_1)}(::Type{T}, X::$(type_2)) = geotransform(T, X)           # $(h1), $(h2)
 
         # with reference point
         call{T <: $(type_1)}(::Type{T}, X::$(type_2), ref) = geotransform(T, X, ref) # $(h1), $(h2)
+
     end
+
+    # define a value preserving transform if they have different handlers
+    if (get_handler(type_1) != get_handler(type_2))
+        qn = quote
+            convert{T <: $(type_1)}(::Type{T}, X::$(type_2)) = add_param(T)(getX(X), getY(X), getZ(X))
+        end
+        append!(qb.args, qn.args)
+    end
+    return qb
 end
 
 
@@ -508,7 +568,7 @@ function add_import_export(geodesy_type, fields)
         convert(::Type{Vector}, X::$(geodesy_type)) = vcat($(export_expr.args...))
 
         # export to a tuple
-        convert(::Type{NTuple}, X::$(geodesy_type)) = $(export_expr.args)
+        convert(::Type{NTuple}, X::$(geodesy_type)) = $(export_expr)
 
     end
     return q
@@ -540,7 +600,7 @@ function build_methods{geo_type}(::Type{geo_type}, fields=fieldnames(geo_type), 
     append!(qb.args, Geodesy.add_maths(geo_type, fields).args)
 
     # add additional constructors
-    append!(qb.args, Geodesy.add_constructors(geo_type).args)
+    append!(qb.args, Geodesy.add_constructors(geo_type, fields).args)
 
     # the number of elements in the representation
     append!(qb.args, Geodesy.add_projection(geo_type).args)
