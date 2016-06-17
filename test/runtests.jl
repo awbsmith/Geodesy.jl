@@ -1,6 +1,6 @@
 using BaseTestNext
 using FixedSizeArrays
-using Geodesy2
+using Geodesy
 
 @testset "Geodesy Tests" begin
     for f in ["crs", "position"] #, "misc", "transform"]

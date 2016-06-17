@@ -1,7 +1,7 @@
 #
 # Module to define tests related to CRS's
 #
-import Geodesy2: UnknownCS, UnknownEllipse, eWGS84, WGS84_Ellipse
+import Geodesy: UnknownCS, UnknownEllipse, eWGS84, WGS84_Ellipse
 
 @testset "Datum tests" begin
 

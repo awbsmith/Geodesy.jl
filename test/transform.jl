@@ -5,8 +5,8 @@
 
 macro approx_eq(a, b)
     quote
-        @test Geodesy2.numel($(a)) == Geodesy2.numel($(b))
-        for i = 1:Geodesy2.numel($(a))
+        @test Geodesy.numel($(a)) == Geodesy.numel($(b))
+        for i = 1:Geodesy.numel($(a))
             @test_approx_eq $(a)[i] $(b)[i]
         end
     end
@@ -14,8 +14,8 @@ end
 
 macro approx_eq_eps(a, b, eps)
     quote
-        @test Geodesy2.numel($(a)) == Geodesy2.numel($(b))
-        for i = 1:Geodesy2.numel($(a))
+        @test Geodesy.numel($(a)) == Geodesy.numel($(b))
+        for i = 1:Geodesy.numel($(a))
             @test abs($(a)[i] - $(b)[i]) < $(eps)
         end
     end

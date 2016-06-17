@@ -8,7 +8,7 @@ function minimize_display{pType}(::Type{pType})
 
     # get rid of the module identifier
     # raw_str = strip_module_name(strip_type_params(pType))
-    raw_str = replace(string(pType), "Geodesy2.", "")
+    raw_str = replace(string(pType), "Geodesy.", "")
     # raw_str = strip_module_name(pType)
     raw_str = replace(raw_str, r"{.*}", "")
     raw_expr = Symbol(raw_str)
@@ -70,7 +70,7 @@ end
 #
 
 function minimize_cs_display{csType}(::Type{csType})
-    raw_str = replace(string(csType), "Geodesy2.", "")
+    raw_str = replace(string(csType), "Geodesy.", "")
     qb = quote
         show(io::Base.IO, ::Type{$(csType)}) = print(io, $(raw_str))
         show(io::Base.IO, ::$(csType)) = print(io, $(raw_str) * "()")

@@ -16,7 +16,7 @@ get_crs_type{T}(::Type{T}) = Void
 # create an abstract type
 #
 abstract AbstractCRS
-# show{T <: AbstractCRS}(io::Base.IO, ::Type{T}) = print(io,replace(string(T), "Geodesy2.", ""))
+# show{T <: AbstractCRS}(io::Base.IO, ::Type{T}) = print(io,replace(string(T), "Geodesy.", ""))
 
 #
 # Create a CRS object

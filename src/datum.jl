@@ -24,7 +24,7 @@ create_datum_templates()
 # define datums
 #
 abstract AbstractDatum
-# show{T <: AbstractDatum}(io::Base.IO, ::Type{T}) = print(io,replace(string(T), "Geodesy2.", ""))
+# show{T <: AbstractDatum}(io::Base.IO, ::Type{T}) = print(io,replace(string(T), "Geodesy.", ""))
 
 # return this for abstract datums
 get_datum{T <: AbstractDatum}(::T) = UnknownDatum

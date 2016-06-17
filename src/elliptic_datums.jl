@@ -68,7 +68,7 @@ immutable OSGB36 <: TypedEllipticDatum; end # is this actually dynamic?
 
 # pretty up the display
 for eType in subtypes(TypedEllipticDatum)
-    str = replace(string(eType), "Geodesy2.", "")
+    str = replace(string(eType), "Geodesy.", "")
     eval(:(show(io::Base.IO, ::Type{$(eType)}) = print(io, $(str))))
 end
 

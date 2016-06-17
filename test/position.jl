@@ -1,6 +1,6 @@
-import Geodesy2: ndims, default_coord_system
-import Geodesy2: LLA_CS, LL_CS, ECEF_CS, ENU_CS, UnknownCS, AbstractPosition
-import Geodesy2: eWGS84
+import Geodesy: ndims, default_coord_system
+import Geodesy: LLA_CS, LL_CS, ECEF_CS, ENU_CS, UnknownCS, AbstractPosition
+import Geodesy: eWGS84
 
 
 
