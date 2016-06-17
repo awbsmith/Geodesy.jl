@@ -1,5 +1,5 @@
 #
-# Datums 
+# Datums
 # note that geodesy itself doesn't understand datums, it just stops you doing silly things with them
 
 abstract AbstractDatum
@@ -27,11 +27,11 @@ abstract KnownDatum <: AbstractDatum
 
 
 
-# build alias's for known datums 
+# build alias's for known datums
 """
 When using a "static" datum fixed points on the Earth's surface move over time because of effects like continental drift (the datum is static but the Earth is not)
 """
-abstract StaticDatum <: KnownDatum 
+abstract StaticDatum <: KnownDatum
 
 # And make some datums based on them
 immutable WGS84 <: StaticDatum; end
@@ -42,7 +42,7 @@ immutable NAD27 <: StaticDatum; end # is this actually dynamic?
 ellipsoid(NAD27) = ellipsoid(CLARKE66_ELLIPSE)
 show(io::IO, ::Type{NAD27}) = print(io, "NAD27")
 
-immutable ED50 <: StaticDatum; end 
+immutable ED50 <: StaticDatum; end
 ellipsoid(::Type{ED50}) = ellipsoid(HAYFORD_ELLIPSE)
 show(io::IO, ::Type{ED50}) = print(io, "ED50")
 
@@ -54,10 +54,10 @@ show(io::IO, ::Type{OSGB36}) = print(io, "OSGB36")
 # The below are dynamic datums (a fixed point on the earth's surface doesn't move with continental drift)
 # (aka the datum is dynamic allowing points to be static)
 """
-When using a "dynamic" datum fixed points on the Earth's surface have constant coordinates (static) over time, because the datum changes (dynamic) over time to account for effects like continental drift.  
+When using a "dynamic" datum fixed points on the Earth's surface have constant coordinates (static) over time, because the datum changes (dynamic) over time to account for effects like continental drift.
 Any accurate transformation between static and dynamic datums should include a time
 """
-abstract DynDatum <: KnownDatum 
+abstract DynDatum <: KnownDatum
 
 # Australia
 immutable GDA94  <:  DynDatum; end
@@ -107,6 +107,10 @@ abstract KnownGeoid <: AbstractGeoid
 immutable AusGeoid09 <: KnownGeoid end
 geoid_file(::Type{AusGeoid09}) = "ausgeoid09.gtx"
 
+# Ellipsoidal (a.k.a no geoid)
+immutable NoGeoid <: KnownGeoid end
+geoid_file(::Type{NoGeoid}) = ""
+
 
 
 
@@ -114,7 +118,7 @@ geoid_file(::Type{AusGeoid09}) = "ausgeoid09.gtx"
 # function to get a list of all datums
 function get_datums(datum::DataType=AbstractDatum, super::ASCIIString="", out=Vector{ASCIIString}(0))
     sub_datums = subtypes(datum)
-    if (length(sub_datums) > 0) 
+    if (length(sub_datums) > 0)
         for sd in sub_datums
             out = get_datums(sd, datum==AbstractDatum ? "" : " (" * string(datum) * ")", out)
         end
@@ -150,7 +154,7 @@ end
 # e.g find_match(Proj4.epsg, [r"proj=longlat", r"datum=WGS84"])
 #####################################################################
 function find_match{T,U}(p4_dict::Dict{T,U}, exprs)
-    
+
     if !isa(exprs, Vector)
         exprs = [exprs]
     end
@@ -159,7 +163,7 @@ function find_match{T,U}(p4_dict::Dict{T,U}, exprs)
     matched_str = Vector{U}(0)
     for key in keys(p4_dict)
         str = p4_dict[key]
-        hasmatch = true    
+        hasmatch = true
         for expr in exprs
             hasmatch &= length(matchall(expr, str)) > 0
         end

@@ -2,17 +2,17 @@
 function proj4_str{auth, code}(::Type{SRID{auth, code}})
 
     dict_sym = symbol(lowercase(string(auth)))
-    
+
     local dict
-    try # hasfield / isfield? 
+    try # hasfield / isfield?
         dict = Proj4.(dict_sym)
     catch
-        error("Proj4 does not know the SRID Authority: $(auth).\nPlease overload Geodesy.proj4_str to return a the correct Proj4 string for SRID{$(auth), $(code)}\n" * 
+        error("Proj4 does not know the SRID Authority: $(auth).\nPlease overload Geodesy.proj4_str to return a the correct Proj4 string for SRID{$(auth), $(code)}\n" *
               "Geodesy.proj4_str(::Type{SRID{$(auth), $(code)}}) = <Proj4 projection string>")
     end
 
     if !haskey(dict, code)
-        error("Proj4 does not know the code $(code) for authority $(auth).\nPlease overload Geodesy.proj4_str to return a the correct Proj4 string for SRID{$(auth), $(code)}\n" * 
+        error("Proj4 does not know the code $(code) for authority $(auth).\nPlease overload Geodesy.proj4_str to return a the correct Proj4 string for SRID{$(auth), $(code)}\n" *
               "Geodesy.proj4_str(::Type{SRID{$(auth), $(code)}}) = <Proj4 projection string>")
     end
 
@@ -22,6 +22,9 @@ end
 
 
 # get the Proj4 string for a given SRID
+proj4_str{T <: SRID}(::Type{T}, ::Type{NoGeoid}) = proj4_str(T)
+
+# get the Proj4 string for a given SRID and a given geoid
 function proj4_str{T <: SRID, G <: KnownGeoid}(::Type{T}, ::Type{G})
 
     # get the proj4 string for without the geoid first
