@@ -5,7 +5,7 @@ immutable Proj4Handler   <: AbstractPackageHandler; end     # for point handled 
 
 
 """
-Points with a full coordinate reference system as defined by an SRID identifier 
+Points with a full coordinate reference system as defined by an SRID identifier
 
 Its up to the user to determine the what the x / y / z fields actually represent; which is governed by the element order in Proj4
 
@@ -22,7 +22,7 @@ end
 # useful shortcuts
 typealias CRS_NULL CRS{UnknownSRID}
 
-default_params{T <: CRS}(::Type{T}) = (UnknownSRID,) 
+default_params{T <: CRS}(::Type{T}) = (UnknownSRID,)
 
 
 # trait style functions
@@ -51,8 +51,8 @@ immutable CCRS_Geoid{T <: AbstractSRID, U <: AbstractGeoid} <: AbstractCCRS{T, U
     z::Float64
 end
 
-default_params{T <: CCRS_Geoid}(::Type{T}) = (UnknownSRID, 
-                                              UnknownGeoid)   
+default_params{T <: CCRS_Geoid}(::Type{T}) = (UnknownSRID,
+                                              UnknownGeoid)
 
 # trait style functions
 has_srid{T <: CCRS_Geoid}(::Type{T}) = Val{true}
@@ -63,10 +63,6 @@ get_handler{T <: CCRS_Geoid}(::Type{T}) = Proj4Handler
 # Use Geodesy to initialize a standard set of methods
 Proj4_types = [CRS, CCRS_Geoid]
 for (i, t) in enumerate(Proj4_types)
-     Geodesy.eval(build_methods(t, fieldnames(t), Geodesy.GeodesyTypes))  
+     Geodesy.eval(build_methods(t, fieldnames(t), Geodesy.GeodesyTypes))
 end
-
-
-
-
 

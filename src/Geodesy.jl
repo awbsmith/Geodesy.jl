@@ -6,7 +6,7 @@ module Geodesy
 
 
 using FixedSizeArrays
-using Proj4  
+using Proj4
 
 import Base.show, Base.call, Base.convert, Base.+, Base.-, Base.isnan, Base.getindex
 
@@ -22,13 +22,13 @@ export
     ECEF,
 
     # Local coordinate systems
-    ENU,  
+    ENU,
 
     #
     # Position types supported by Proj4
     #
     CRS,
-    CCRS_Geoid,    
+    CCRS_Geoid,
 
 
     #
@@ -36,12 +36,12 @@ export
     #
     LLA_WGS84,   # typealias for LLA{WGS84}
     ECEF_WGS84,  # typealias for ECEF{WGS84}
-    
+
     # no datum info
     LL_NULL,
-    LLA_NULL,   
+    LLA_NULL,
     ECEF_NULL,
-    CRS_NULL,  
+    CRS_NULL,
     ENU_NULL,
 
     # Other types
@@ -55,13 +55,13 @@ export
     UnknownDatum,
     WGS84,
     GRS80,
-    GDA94,  
+    GDA94,
 
     # datum functions
     get_datum,
     get_datums,    # get a list of all known datums
-    
-    
+
+
     #
     # transformation functions
     #
@@ -73,21 +73,21 @@ export
     # SRID related
     #
     AbstractSRID,
-    UnknownSRID, 
+    UnknownSRID,
     SRID,
     get_srid,
-    
+
 
     #
     # Geoid related
     #
-    AbstractGeoid,  
-    UnknownGeoid, 
+    AbstractGeoid,
+    UnknownGeoid,
     get_geoid,
 
     # utm related
-    utm_zone, 
-    
+    utm_zone,
+
     #
     # accessors
     #
@@ -120,7 +120,8 @@ export
     =#
 
 
-for f in ["datums", "ellipsoids", "srid", "geodesy_types", "known_srids", "utm", "math_funcs", "type_methods", "transform", "external",  
+for f in ["datums", "ellipsoids", "srid", "geodesy_types", "known_srids", "utm", "math_funcs", "type_methods", "transform", "external",
+          "ITRF_GDA94",
           "bounds", "vicenty", "distance",                                                          # do these belong here?
           "Proj4_Types/proj4_types", "Proj4_Types/projections", "Proj4_Types/proj4_transforms"]     # these definitely don't
     include("$f.jl")
