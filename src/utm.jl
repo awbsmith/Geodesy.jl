@@ -43,4 +43,3 @@ function utm_srid(lla::Union{LLA{WGS84}, LL{WGS84}})
     return (auth, code)
 end
 
-

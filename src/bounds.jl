@@ -5,7 +5,7 @@ import Base.getindex, Base.setindex!, Base.*
 ### Bounds Type ###
 ###################
 
-type Bounds{T} 
+type Bounds{T}
     min_x::Float64
     max_x::Float64
     min_y::Float64
@@ -80,14 +80,14 @@ function call{T <: ENU, U <: Union{LL, LLA}, V <: Union{LL, LLA}}(::Type{Bounds{
 
     xs = [bounds.min_x, bounds.max_x]
     ys = [bounds.min_y, bounds.max_y]
-    
+
     # AWBS - what's this about?
     if bounds.min_y < 0.0 < bounds.max_y
         push!(ys, 0.0)
     end
 
     ref_x = getX(ll_ref)
-    
+
     if bounds.min_x < ref_x < bounds.max_x ||
        (bounds.min_x > bounds.max_x && !(bounds.min_x >= ref_x >= bounds.max_x))
         push!(xs, ref_x)
@@ -188,7 +188,7 @@ bound_thetad(theta::Real) = theta - floor((theta+180) / (360)) * 360
 # function to start bounding boxes for the vector of LLA points X
 function init_hyps{T <: Union{LLA, LL}}(X::Vector{T}, degs::Bool=true)
 
-    bbox_hyps = [Bounds{T}(NaN, NaN, NaN, NaN), 
+    bbox_hyps = [Bounds{T}(NaN, NaN, NaN, NaN),
                  Bounds{T}(NaN, NaN, NaN, NaN)]  # two hypotheses
     sc = degs ? pi / 180 : 1.0
 
@@ -198,7 +198,7 @@ function init_hyps{T <: Union{LLA, LL}}(X::Vector{T}, degs::Bool=true)
         cnt_min = length(X)+1
         for dim = 1:2
 
-            # start point        
+            # start point
             ts = bound_theta(sc * (X[1][dim]))
             cnt = min(2,length(X))
 
@@ -264,7 +264,7 @@ end
 # input theta should be -pi <= theta < pi
 function updatebounds_worker!{T <: Union{LLA, LL}}(bbox::Bounds{T}, theta::Real, dim::Int)
 
-    # indexing shortcuts    
+    # indexing shortcuts
     idx1 = (dim-1)*2+1
     idx2 = (dim-1)*2+2
 
@@ -277,7 +277,7 @@ function updatebounds_worker!{T <: Union{LLA, LL}}(bbox::Bounds{T}, theta::Real,
     if (dlower > dbound)
 
         # clockwise distance from the upper bound
-        dupper = mod(theta - bbox[idx2], 2*pi)  
+        dupper = mod(theta - bbox[idx2], 2*pi)
 
         # convert distance from the lower bound to anticlockwise
         dlower = 2*pi - dlower
@@ -310,10 +310,4 @@ function pick_hyp{T <: Union{LLA, LL}}(bbox_hyps::Vector{Bounds{T}}, degs::Bool=
     return Bounds{T}(d1b[1], d1b[2], d2b[1], d2b[2])
 
 end
-
-
-
-
-
-
 

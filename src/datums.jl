@@ -107,6 +107,10 @@ abstract KnownGeoid <: AbstractGeoid
 immutable AusGeoid09 <: KnownGeoid end
 geoid_file(::Type{AusGeoid09}) = "ausgeoid09.gtx"
 
+# UK
+immutable OSGM02 <: KnownGeoid end
+geoid_file(::Type{OSGM02}) = "osgm02etrs89v1.gtx"
+
 # Ellipsoidal (a.k.a no geoid)
 immutable NoGeoid <: KnownGeoid end
 geoid_file(::Type{NoGeoid}) = ""
