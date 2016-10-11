@@ -66,7 +66,7 @@ ref_date(::Type{GDA94}) = DateTime(1994)
 show(io::IO, ::Type{GDA94}) = print(io, "GDA94")
 
 # Europia
-immutable ETRS89  <:  DynDatum; end
+immutable ETRS89  <:  DynDatum; end # N.B. adopting the same notation abuse as everyone else, this is actually ETRF89
 ellipsoid(::Type{ETRS89}) = ellipsoid(GRS80_ELLIPSE)
 ref_date(::Type{ETRS89}) = DateTime(1989)
 show(io::IO, ::Type{ETRS89}) = print(io, "ETRS89")

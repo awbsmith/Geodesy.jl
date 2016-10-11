@@ -10,10 +10,13 @@
 
 Return a `Transformation` converting ECEF points from one ITRF realization to another to GDA94.  Datum
 shift parameters are taken from [1], supporting `ITRF_year` 2014, 2008, 2005, 2000, 1997, 1996
-1997, 1996.  `epoch` is the `Date` (or `DateTime`) of interest at which the
+1997, 1996, 1994, 1993, 1992, 1991, 1990, 1989, 1988.  `epoch` is the `Date` (or `DateTime`) of interest at which the
 input `ECEF` coordinates were measured in ITRF.
 
 [1] http://itrf.ign.fr/trans_para.php
+
+TODO: We don't yet support `epoch` varying per input point, but there should be
+a `Transformation` object for this at some stage.
 
 """
 
@@ -23,7 +26,7 @@ function ITRF_from_ITRF(ITRF_output_year, ITRF_input_year, epoch)
     #
     # (Unit key: ppb = parts per billion; mas = milli arc seconds; yr = year)
     #
-    #          Values at 2000 reference epoch                                 Derivatives                                          EPOCH
+    #          Values at 2000 reference epoch                                 Derivatives                                          ReferenceEpoch
     #  Name    tx      ty      tz     D       rx       ry      rz             tx      ty    tz     D      rx      ry      rz
     #  Units   mm      mm      mm     ppb     mas      mas     mas            mm/yr  mm/yr  mm/yr  ppb/yr mas/yr  mas/yr  mas/yr
     #
@@ -54,7 +57,7 @@ function ITRF_from_ITRF(ITRF_output_year, ITRF_input_year, epoch)
         (2008, 1989) => ([ 27.8000,  38.6000, -101.2000,  7.3100,  0.0000,  0.0000,  0.0600], [ 0.1000, -0.5000, -3.2000,  0.0900,  0.0000,  0.0000,  0.0200], 2000),
         (2008, 1988) => ([ 22.8000,  2.6000, -125.2000,  10.4100,  0.1000,  0.0000,  0.0600], [ 0.1000, -0.5000, -3.2000,  0.0900,  0.0000,  0.0000,  0.0200], 2000),
         # 2005 ->
-        (2005, 2000) => ([0.1 -0.8 -5.8 0.40 0.000 0.000 0.000], [-0.2 0.1 -1.8 0.08 0.000 0.000 0.000], 2000)
+        (2005, 2000) => ([0.1 -0.8 -5.8 0.40 0.000 0.000 0.000], [-0.2 0.1 -1.8 0.08 0.000 0.000 0.000], 2000),
         # 2000 ->
         (2000, 1997) => ([ 0.6700,  0.6100, -1.8500,  1.5500,  0.0000,  0.0000,  0.0000], [ 0.0000, -0.0600, -0.1400,  0.0100,  0.0000,  0.0000,  0.0200], 1997),
         (2000, 1996) => ([ 0.6700,  0.6100, -1.8500,  1.5500,  0.0000,  0.0000,  0.0000], [ 0.0000, -0.0600, -0.1400,  0.0100,  0.0000,  0.0000,  0.0200], 1997),
@@ -71,10 +74,11 @@ function ITRF_from_ITRF(ITRF_output_year, ITRF_input_year, epoch)
         throw(ErrorException("No ITRF$(ITRF_input_year) to ITRF$(ITRF_output_year) transformation available"))
     end
     params, rates, reference_epoch = table[key]
+    reference_epoch = DateTime(reference_epoch,1,1)
 
     # Fractional years since reference epoch.  Seems a bit unnecessarily cumbersome!
     millisecs_per_year = 365.25 * Dates.value(Dates.Millisecond(Dates.Day(1)))
-    dt = Dates.value(Dates.Millisecond(convert(DateTime, epoch) - convert(DateTime, reference_epoch))) / millisecs_per_year
+    dt = Dates.value(Dates.Millisecond(convert(DateTime, epoch) - reference_epoch)) / millisecs_per_year
 
     # Convert units to meters and radians
     mas2rad = deg2rad(1e-3/(60*60))
@@ -85,7 +89,7 @@ function ITRF_from_ITRF(ITRF_output_year, ITRF_input_year, epoch)
     M = @fsa [1+D  Rz  -Ry;
              -Rz   1+D  Rx;
               Ry  -Rx   1+D]
-    T = (M, Vec(Tx,Ty,Tz))
+    T = Vec(Tx,Ty,Tz)
 
     # want the inverse to go forward in time
     if (ITRF_output_year > ITRF_input_year)
@@ -138,6 +142,7 @@ function GDA94_from_ITRF(ITRF_year, epoch)
         1996 => ([ 24.54, -36.43, -68.12, 6.901, -2.7359, -2.0431, 0.3731], [-21.80,  4.71, 26.27, 0.388, 2.0203, 2.1735, 1.6290]),
     )
     reference_epoch = DateTime(1994,1,1)
+    (2008, 1994) => ([ 4.8000,  2.6000, -33.2000,  2.9200,  0.0000,  0.0000,  0.0600], [ 0.1000, -0.5000, -3.2000,  0.0900,  0.0000,  0.0000,  0.0200], 2000),
 
     if !haskey(table, ITRF_year)
         throw(ErrorException("No ITRF to GDA94 parameters for ITRF year $ITRF_year"))
@@ -178,7 +183,7 @@ end
 #
 
 """
-    ETRF2000_from_ITRF(ITRF_year, epoch)
+    ETRF_from_ITRF(ITRF_year, epoch)
 
 Return a `Transformation` converting ECEF points from ITRF to ETRF2000.  Datum
 shift parameters are taken from [1], supporting `ITRF_year` 2008, 2005, 2000,
@@ -188,11 +193,61 @@ input `ECEF` coordinates were measured in ITRF.
 [1] C. Boucher and Z. Altamimi, "Memo : Specifications for reference frame fixing in the analysis of a
     EUREF GPS campaign" Version 8
 
-TODO: We don't yet support `epoch` varying per input point, but there should be
-a `Transformation` object for this at some stage.
-
-TODO: the reference also has IRTFXXXX -> ETRFXXXX parameters.  Implement these?
 """
+function ETRF_from_ITRF(ETRF_year, ITRF_year, epoch)
+    (M1, T1) = ITRF_from_ITRF(ETRF_year, ITRF_year, epoch)
+    (M2, T2) = ETRF_from_ITRF(ETRF_year, epoch)
+    (M2 * M1, M2 * T1 + T2) # compose
+end
+
+function ETRF_from_ITRF(Year, epoch)
+
+    # ITRF transformation parameters from
+    # C. Boucher and Z. Altamimi, "Memo : Specifications for reference frame fixing in the analysis of a
+    # EUREF GPS campaign" Version 8
+    #
+    # These are intentionally kept exactly the same as the paper for
+    # consistency and ease of checking.
+    #
+    # (Unit key: ppb = parts per billion; mas = milli arc seconds; yr = year)
+    #
+    #          Values at 1989 reference epoch                                 Derivatives
+    #  Name    tx      ty      tz     D       rx       ry      rz             tx      ty    tz     D      rx      ry      rz
+    #  Units   cm      cm      cm     1e-8    mas      mas     mas            cm/yr   cm/yr cm/yr  1e-8/yr mas/yr  mas/yr  mas/yr
+    #
+    table = Dict(
+        2005 => ([ 5.6000,  4.8000, -3.7000,  0.0000,  0.0000,  0.0000,  0.0000], [ 0.0000,  0.0000,  0.0000,  0.0000,  0.0540,  0.5180, -0.7810]),
+        2000 => ([ 5.4000,  5.1000, -4.8000,  0.0000,  0.0000,  0.0000,  0.0000], [ 0.0000,  0.0000,  0.0000,  0.0000,  0.0810,  0.4900, -0.7920]),
+        1997 => ([ 4.1000,  4.1000, -4.9000,  0.0000,  0.0000,  0.0000,  0.0000], [ 0.0000,  0.0000,  0.0000,  0.0000,  0.2000,  0.5000, -0.6500]),
+        1996 => ([ 4.1000,  4.1000, -4.9000,  0.0000,  0.0000,  0.0000,  0.0000], [ 0.0000,  0.0000,  0.0000,  0.0000,  0.2000,  0.5000, -0.6500]),
+        1994 => ([ 4.1000,  4.1000, -4.9000,  0.0000,  0.0000,  0.0000,  0.0000], [ 0.0000,  0.0000,  0.0000,  0.0000,  0.2000,  0.5000, -0.6500]),
+        1993 => ([ 1.9000,  5.3000, -2.1000,  0.0000,  0.0000,  0.0000,  0.0000], [ 0.0000,  0.0000,  0.0000,  0.0000,  0.3200,  0.7800, -0.6700]),
+        1992 => ([ 3.8000,  4.0000, -3.7000,  0.0000,  0.0000,  0.0000,  0.0000], [ 0.0000,  0.0000,  0.0000,  0.0000,  0.2100,  0.5200, -0.6800]),
+        1991 => ([ 2.1000,  2.5000, -3.7000,  0.0000,  0.0000,  0.0000,  0.0000], [ 0.0000,  0.0000,  0.0000,  0.0000,  0.2100,  0.5200, -0.6800]),
+        1990 => ([ 1.9000,  2.8000, -2.3000,  0.0000,  0.0000,  0.0000,  0.0000], [ 0.0000,  0.0000,  0.0000,  0.0000,  0.1100,  0.5700, -0.7100]),
+        1989 => ([ 0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  0.0000,  0.0000], [ 0.0000,  0.0000,  0.0000,  0.0000,  0.1100,  0.5700, -0.7100])
+    )
+    reference_epoch = DateTime(1989,1,1)
+
+    if !haskey(table, Year)
+        throw(ErrorException("No $(src) to $(dest) parameters available"))
+    end
+    params, rates = table[Year]
+
+    # Fractional years since reference epoch.  Seems a bit unnecessarily cumbersome!
+    millisecs_per_year = 365.25 * Dates.value(Dates.Millisecond(Dates.Day(1)))
+    dt = Dates.value(Dates.Millisecond(convert(DateTime, epoch) - reference_epoch)) / millisecs_per_year
+
+    # Convert units to meters and radians
+    mas2rad = deg2rad(1e-3/(60*60))
+    unitconv = [1e-2, 1e-2, 1e-2, 1e-8, mas2rad, mas2rad, mas2rad]
+    Tx,Ty,Tz, D, Rx,Ry,Rz = unitconv .* (params .+ rates*dt)
+    M =  @fsa [1+D  Rz  -Ry;
+              -Rz   1+D  Rx;
+               Ry  -Rx   1+D]
+    (M, Vec(Tx,Ty,Tz))
+end
+
 function ETRF2000_from_ITRF(ITRF_year, epoch)
     # ITRF transformation parameters from
     # C. Boucher and Z. Altamimi, "Memo : Specifications for reference frame fixing in the analysis of a
@@ -249,6 +304,12 @@ end
 The inverse of `ETRF2000_from_ITRF()`: Return a `Transformation` converting ECEF
 points from ITRF to GDA94.
 """
+function ITRF_from_ETRF(ITRF_year, ETRF_year, epoch)
+    M, T = (ETRF_from_ITRF(ETRF_year, ITRF_year, epoch))
+    Mi = inv(M)
+    return Mi, -Mi * T
+end
+
 function ITRF_from_ETRF2000(ITRF_year, epoch)
     M, T = (ETRF2000_from_ITRF(ITRF_year, epoch))
     Mi = inv(M)
