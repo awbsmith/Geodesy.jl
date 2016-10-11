@@ -71,7 +71,6 @@ ellipsoid(::Type{ETRS89}) = ellipsoid(GRS80_ELLIPSE)
 ref_date(::Type{ETRS89}) = DateTime(1989)
 show(io::IO, ::Type{ETRS89}) = print(io, "ETRS89")
 
-
 # Americania
 immutable NAD83  <:  DynDatum; end
 ellipsoid(::Type{NAD83}) = ellipsoid(GRS80_ELLIPSE)
