@@ -110,6 +110,10 @@ geoid_file(::Type{AusGeoid09}) = "ausgeoid09.gtx"
 immutable OSGM02 <: KnownGeoid end
 geoid_file(::Type{OSGM02}) = "osgm02etrs89v1.gtx"
 
+# Google Earth
+immutable EGM96 <: KnownGeoid end
+geoid_file(::Type{EGM96}) = "egm96-5.gtx"
+
 # Ellipsoidal (a.k.a no geoid)
 immutable NoGeoid <: KnownGeoid end
 geoid_file(::Type{NoGeoid}) = ""
