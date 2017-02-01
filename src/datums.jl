@@ -147,9 +147,11 @@ end
 
 # function to retrieve environment variables
 function getenv(var::AbstractString)
-	val = ccall( (:getenv, "libc"),
-		         Ptr{UInt8}, (Ptr{UInt8},), bytestring(var))
-	path = (val == C_NULL) ? "" : ASCIIString(bytestring(val))
+    path = ""
+    try
+	    val = ccall( (:getenv, "libc"), Ptr{UInt8}, (Ptr{UInt8},), bytestring(var))
+    	path = (val == C_NULL) ? "" : ASCIIString(bytestring(val))
+    end
     return path
 end
 

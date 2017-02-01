@@ -14,7 +14,7 @@ known_srids = [
 ############
 
 LLA{WGS84}      :EPSG       4326;    # EPSG code for lon lat wgs84 (GPS).
-ECEF{WGS84}     :EPSG       4978;    # EPSG code for lon ecef wgs84 (GPS).  
+ECEF{WGS84}     :EPSG       4978;    # EPSG code for lon ecef wgs84 (GPS).
 
 ##############
 # NAD27
@@ -23,19 +23,19 @@ ECEF{WGS84}     :EPSG       4978;    # EPSG code for lon ecef wgs84 (GPS).
 LLA{NAD27}      :EPSG       4267;
 
 
-############## 
+##############
 # ED50
 ##############
 
 LLA{ED50}       :EPSG       4230;
 
-############## 
+##############
 # OSGB36
 ##############
 
 LLA{OSGB36}     :EPSG       4277;
 
-############## 
+##############
 # GDA94
 ##############
 
@@ -43,7 +43,7 @@ LLA{OSGB36}     :EPSG       4277;
 LLA{GDA94}     :EPSG        4283;
 
 
-############## 
+##############
 # ETRS89
 ##############
 
@@ -51,7 +51,7 @@ LLA{GDA94}     :EPSG        4283;
 LLA{ETRS89}    :EPSG        4258;
 
 
-############## 
+##############
 # NAD83
 ##############
 
@@ -64,15 +64,15 @@ LLA{NAD83}     :EPSG        4269
 for i = 1:size(known_srids,1)
 
     q = quote
-    
+
         # constructor from type
         auth = symbol($(string(known_srids[i,2])))  # there must be an easier way to insert a raw symbol
-        SRID(::Type{$(known_srids[i,1])}) = SRID{auth, $(known_srids[i,3])}  
+        SRID(::Type{$(known_srids[i,1])}) = SRID{auth, $(known_srids[i,3])}
 
         # constructor from a point
         SRID(::$(known_srids[i,1])) = SRID($(known_srids[i,1]))
 
-        # add a get_srid method 
+        # add a get_srid method
         get_srid(::Type{$(known_srids[i,1])}) = SRID($(known_srids[i,1]))
         get_srid(::$(known_srids[i,1])) = SRID($(known_srids[i,1]))
 
@@ -80,7 +80,7 @@ for i = 1:size(known_srids,1)
     eval(q)
 end
 
-
-        
-
+# defaults
+# get_srid(x) = UnknownSRID
+# SRID(x) = UnknownSRID
 

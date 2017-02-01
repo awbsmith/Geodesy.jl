@@ -1,7 +1,5 @@
 ### Placing miscellaneuous utm functions here (helpers for common use cases)
 
-
-
 # find the utm zone for a specified LLA position
 # TODO: Make sure this is the same for all Ellipsoids
 """
@@ -34,6 +32,7 @@ Find the SRID for utm zone that the lat lon point input lies in.  This is only v
 
 Returns the authority and the code
 """
+utm_srid(lla::Union{LLA, LL}) = :EPSG, -1  # can't do it
 function utm_srid(lla::Union{LLA{WGS84}, LL{WGS84}})
 
     # get the band and zone
