@@ -120,8 +120,6 @@ geoid_file(::Type{NoGeoid}) = ""
 
 
 
-
-
 # function to get a list of all datums
 function get_datums(datum::DataType=AbstractDatum, super::ASCIIString="", out=Vector{ASCIIString}(0))
     sub_datums = subtypes(datum)
@@ -137,25 +135,7 @@ end
 
 
 # function to try and guess the geoid dir
-function find_geoid_dir()
-    path = getenv("PROJ_LIB") # find a PROJ_LIB environmental variable
-    if (length(path) == 0)
-        path = "/usr/local/share/proj"  # I think this is the normal directory for Proj
-    end
-    return path
-end
-
-# function to retrieve environment variables
-function getenv(var::AbstractString)
-    path = ""
-    try
-	    val = ccall( (:getenv, "libc"), Ptr{UInt8}, (Ptr{UInt8},), bytestring(var))
-    	path = (val == C_NULL) ? "" : ASCIIString(bytestring(val))
-    end
-    return path
-end
-
-
+find_geoid_dir() = get(ENV, "GEOID_DIR", "")
 
 
 #####################################################################
