@@ -12,7 +12,7 @@ end
 geodesy_properties = GeodesyProperties(
                                        find_geoid_dir()
                                       )
-                                      
+
 
 
 ######################################################
@@ -38,13 +38,11 @@ get_handler{T}(::Type{T}) = UnknownHandler
 # for the types
 ###############################
 
-abstract  GeodesyType
-
 # abstract form for world coordinates
 abstract  WorldPosition  <: GeodesyType
 
 # abstract form for world surface coordinates
-abstract  WorldSurfacePosition <: WorldPosition 
+abstract  WorldSurfacePosition <: WorldPosition
 
 # Heights relative to something... (basis for a compound coordinate reference system)
 abstract  WorldHeight  <: WorldPosition
@@ -61,7 +59,7 @@ has_srid{T}(::Type{T})    = Val{false}                               # set true 
 has_geoid{T}(::Type{T})   = Val{false}                               # set true if there's a geoid in the parameterization
 has_alt{T}(::Type{T})     = Val{false}                               # set true if there's an altitude coordinate of some kind
 
-# and default parameters 
+# and default parameters
 default_params{T}(::Type{T}) = error("Default parameters not supplied for type $(T). Please overload Geodesy.default_params()")
 
 
@@ -77,7 +75,7 @@ Point in Longitude-Latitude-Altitude (LLA) coordinates defined for the specified
 Use LLA_NULL(lon, lat, alt) if you don't want to encode the reference ellipse in the type
 """
 immutable LLA{T <: AbstractDatum} <: WorldPosition
-    lon::Float64    
+    lon::Float64
     lat::Float64
     alt::Float64
 end
@@ -141,7 +139,7 @@ Point in Longitude-Latitude (LL) coordinates defined for the specified datum / e
 Assumes the height above the ellipsoid is 0
 """
 immutable LL{T <: AbstractDatum} <: WorldSurfacePosition
-    lon::Float64  # proj 4 is lon lat    
+    lon::Float64  # proj 4 is lon lat
     lat::Float64
     LL(x::Real, y::Real) = new(x, y)  # need to specify a constructor to stop the default constructor overwriting the FixedVectorNoTuple{2, Float64} constructors
 end
@@ -178,7 +176,7 @@ immutable GeoidHeight{T <: AbstractGeoid} <: WorldHeight
     h::Float64
 end
 
-default_params{T <: GeoidHeight}(::Type{T}) = (:(error("Always specify a geoid when using the GeoidHeight type")),) 
+default_params{T <: GeoidHeight}(::Type{T}) = (:(error("Always specify a geoid when using the GeoidHeight type")),)
 
 has_geoid{T <: GeoidHeight}(::Type{T}) = Val{true}  # trait style functions
 get_handler{T <: GeoidHeight}(::Type{T}) = Proj4Handler
@@ -196,7 +194,7 @@ immutable UnknownRef <: WorldPosition end  # when we don't want to embed the ref
 # show(io::IO, ::Type{UnknownRef}) = print(io, "???") # this is killing the code generation in type_methods.jl
 
 # we're not code code gening methods for this type, so add this manually
-get_datum(::Type{UnknownRef}) = UnknownDatum          
+get_datum(::Type{UnknownRef}) = UnknownDatum
 
 
 ### Point in East-North-Up (ENU) coordinates
@@ -209,7 +207,7 @@ Use ENU_NULL(e,n,u) if you don't want to encode the reference point in the type
 
 # The template parameter should be a point in LL (ideally) or LLA, or an UnknownRef datatype
 """
-immutable ENU{T} <: LocalPosition   
+immutable ENU{T} <: LocalPosition
     east::Float64
     north::Float64
     up::Float64
@@ -234,14 +232,4 @@ has_alt{T <: ENU}(::Type{T}) = Val{true}
 #    down::Float64
 #end
 #NED(x, y) = NED(x, y, 0.0)
-
-
-
-
-
-
-
-
-
-
 

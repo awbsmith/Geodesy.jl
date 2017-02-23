@@ -10,6 +10,16 @@ using Proj4
 
 import Base.show, Base.call, Base.convert, Base.+, Base.-, Base.isnan, Base.getindex
 
+# decalare the position supertype here
+abstract  GeodesyType
+
+for f in ["datums", "ellipsoids", "srid", "geodesy_types", "known_srids", "utm", "math_funcs", "type_methods", "transform", "external",
+          "ITRF_transformations",
+          "bounds", "vicenty", "distance",                                                          # do these belong here?
+          "Proj4_Types/proj4_types", "Proj4_Types/projections", "Proj4_Types/proj4_transforms"]     # these definitely don't
+    include("$f.jl")
+end
+
 export
 
     #
@@ -42,6 +52,7 @@ export
     LLA_NULL,
     ECEF_NULL,
     CRS_NULL,
+    CCRS_NULL,
     ENU_NULL,
 
     # Other types
@@ -118,13 +129,5 @@ export
     boundaryPoint,
     onBounds
     =#
-
-
-for f in ["datums", "ellipsoids", "srid", "geodesy_types", "known_srids", "utm", "math_funcs", "type_methods", "transform", "external",
-          "ITRF_transformations",
-          "bounds", "vicenty", "distance",                                                          # do these belong here?
-          "Proj4_Types/proj4_types", "Proj4_Types/projections", "Proj4_Types/proj4_transforms"]     # these definitely don't
-    include("$f.jl")
-end
 
 end # module Geodesy

@@ -76,6 +76,10 @@ for i = 1:size(known_srids,1)
         get_srid(::Type{$(known_srids[i,1])}) = SRID($(known_srids[i,1]))
         get_srid(::$(known_srids[i,1])) = SRID($(known_srids[i,1]))
 
+        # be able to grab the datum as well
+        get_datum(::Type{SRID{auth, $(known_srids[i,3])}}) = get_datum($(known_srids[i,1]))
+        get_datum(::SRID{auth, $(known_srids[i,3])}) = get_datum($(known_srids[i,1]))
+
     end
     eval(q)
 end

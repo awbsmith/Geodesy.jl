@@ -11,7 +11,9 @@ get_datum{T <: AbstractDatum}(::Type{T}) = T
 # Unknown
 #
 immutable UnknownDatum <: AbstractDatum end
-get_datum(::Type{AbstractDatum}) = UnknownDatum  # make the abstract datum return this
+
+get_datum(::Type{AbstractDatum}) = UnknownDatum                     # make the abstract datum return this
+get_datum{T <: GeodesyType}(::Union{Type{T}, T}) = UnknownDatum     # default answer when called on the appropriate thing
 
 
 # display ???'s for unkown ellipse for compactness

@@ -13,6 +13,9 @@ show{auth, code}(io::IO, ::Type{SRID{auth, code}}) = print(io, "$(auth)$(code)")
 get_auth{auth, code}(::Type{SRID{auth, code}}) = auth
 get_code{auth, code}(::Type{SRID{auth, code}}) = code
 
+# grab the datum as well
+get_datum{T <: AbstractSRID}(::Union{Type{T}, T}) = UnknownDatum     # default answer when called on the appropriate thing
+
 #=
 # Ideally an SRID would be this but the below can't be use as a parameter of another type for reasons, while a (Symbol, Int) tupple can be a parameter zzz
 immutable SRID <: AbstractSRID
