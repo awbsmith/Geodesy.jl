@@ -1,3 +1,34 @@
+# special exception types
+abstract GeodesyException <: Exception
+
+# unrecognised SRID authority
+type SridAuthException <: GeodesyException
+    msg::ASCIIString
+    code::Int
+    handler::ASCIIString
+end
+
+# unrecognised SRID authority
+type SridUnknownException <: GeodesyException
+    msg::ASCIIString
+    code::Int
+    handler::ASCIIString
+end
+
+# unknown geoid
+type GeoidUnknownException <: GeodesyException
+    msg::ASCIIString
+    code::Int
+    handler::ASCIIString
+end
+
+# can't find the geoid file
+type GeoidFileException <: GeodesyException
+    msg::ASCIIString
+    code::Int                          # file not found (SystemError) seems to put a 2 here
+end
+
+
 # get the Proj4 string for a given SRID
 function proj4_str{auth, code}(::Type{SRID{auth, code}})
 
@@ -7,15 +38,14 @@ function proj4_str{auth, code}(::Type{SRID{auth, code}})
     try # hasfield / isfield?
         dict = Proj4.(dict_sym)
     catch
-        error("Proj4 does not know the SRID Authority: $(auth).\nPlease overload Geodesy.proj4_str to return a the correct Proj4 string for SRID{$(auth), $(code)}\n" *
-              "Geodesy.proj4_str(::Type{SRID{$(auth), $(code)}}) = <Proj4 projection string>")
+        throw(SridAuthException("Proj4 does not know the SRID Authority: $(auth).\nPlease overload Geodesy.proj4_str to return a the correct Proj4 string for SRID{$(auth), $(code)}\n" *
+                                "Geodesy.proj4_str(::Type{SRID{$(auth), $(code)}}) = <Proj4 projection string>", 1, "Proj4"))
     end
 
     if !haskey(dict, code)
-        error("Proj4 does not know the code $(code) for authority $(auth).\nPlease overload Geodesy.proj4_str to return a the correct Proj4 string for SRID{$(auth), $(code)}\n" *
-              "Geodesy.proj4_str(::Type{SRID{$(auth), $(code)}}) = <Proj4 projection string>")
+        throw(SridUnknownException("Proj4 does not know the code $(code) for authority $(auth).\nPlease overload Geodesy.proj4_str to return a the correct Proj4 string for SRID{$(auth), $(code)}\n" *
+                                   "Geodesy.proj4_str(::Type{SRID{$(auth), $(code)}}) = <Proj4 projection string>", 1, "Proj4"))
     end
-
     return dict[code]::ASCIIString
 
 end
@@ -36,7 +66,7 @@ function proj4_str{T <: SRID, G <: KnownGeoid}(::Type{T}, ::Type{G})
         geoid = joinpath(get_geoid_dir(), geoid)
     end
     if !isfile(geoid)
-        error("Cannot find the geoid file for geoid: $(G)\nExpected location was: $(geoid)\n(Hint: use Geodesy.set_geoid_dir)")
+        throw(GeoidFileException("Can not locate the geoid file for geoid: $(G) (Hint: use Geodesy.set_geoid_dir)", 2))
     end
     p_str = ASCIIString(p_str * " +geoidgrids=$(geoid)")
 
@@ -44,10 +74,10 @@ end
 
 
 # general error cases
-get_projection{T <: UnknownSRID, U <: UnknownGeoid}(::Type{T}, ::Type{U}) = error("Can't build the Proj4 projection for an unknown SRID / unknown Geoid")
-get_projection{T <: UnknownSRID}(::Type{T}) = error("Can't build the Proj4 projection for an unknown SRID")
-get_projection{T <: UnknownSRID, U <: KnownGeoid}(::Type{T}, ::Type{U}) = error("Can't build the Proj4 projection for an unknown SRID")
-get_projection{T <: SRID, U <: UnknownGeoid}(::Type{T}, ::Type{U}) = error("Can't build the Proj4 projection for an unknown Geoid")
+get_projection{T <: UnknownSRID, U <: UnknownGeoid}(::Type{T}, ::Type{U}) = throw(SridUnknownException("Can't build the Proj4 projection for an unknown SRID / unknown Geoid", -1, "Geodesy"))
+get_projection{T <: UnknownSRID}(::Type{T}) = throw(SridUnknownException("Can't build the Proj4 projection for an unknown SRID", -1, "Geodesy"))
+get_projection{T <: UnknownSRID, U <: KnownGeoid}(::Type{T}, ::Type{U}) = throw(SridUnknownException("Can't build the Proj4 projection for an unknown SRID", -1, "Geodesy"))
+get_projection{T <: SRID, U <: UnknownGeoid}(::Type{T}, ::Type{U}) = throw(GeoidUnknownException("Can't build the Proj4 projection for an unknown Geoid", -1, "Geodesy"))
 
 
 # using a generated function to hopefully only generate one projection per SRID (hopefully this will produce a static var)
