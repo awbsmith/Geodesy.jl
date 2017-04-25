@@ -110,7 +110,7 @@ geoid_file(::Type{AusGeoid09}) = "ausgeoid09.gtx"
 
 # UK
 immutable OSGM02 <: KnownGeoid end
-geoid_file(::Type{OSGM02}) = "osgm02etrs89v1.gtx"
+geoid_file(::Type{OSGM02}) = "osgm02etrs89.gtx"
 
 # Google Earth
 immutable EGM96 <: KnownGeoid end
