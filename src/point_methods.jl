@@ -7,7 +7,7 @@
 
 # TODO: This whole thing should probably be switched to a codegen format
 
-# Convenient union types 
+# Convenient union types
 Geodesy_fam = Union{WorldPosition, WorldSurfacePosition, LocalPosition}  # try to ctach everything
 World_fam = Union{WorldPosition, WorldSurfacePosition}
 Local_fam = Union{LocalPosition}
@@ -52,43 +52,41 @@ get_up{T <: Vec3_fam}(X::T) = X[3]
 
 #TODO: Should these be promote rules or something?
 
-#add_param{T <: ELL_param_fam}(::Type{T}) = typeof(T.parameters[1]) == DataType ? T : T{UnknownDatum}  # not type safe :-(
-@generated add_param{T <: ELL_param_fam}(::Type{T}) = (typeof(T.parameters[1]) == DataType) ? :(T) :  :(T{UnknownDatum})
+@generated add_param{T <: ELL_param_fam}(::Type{T}) = (typeof(_get_params(T)[1]) == DataType) ? :(T) :  :(T{UnknownDatum})
 
-#add_param{T <: LL_param_fam}(::Type{T}) = typeof(T.parameters[1]) == DataType ? T : T{UnknownRef}      # not type safe :-(
-@generated add_param{T <: LL_param_fam}(::Type{T}) = (typeof(T.parameters[1]) == DataType) ? :(T) :  :(T{UnknownRef})
+@generated add_param{T <: LL_param_fam}(::Type{T}) = (typeof(_get_params(T)[1]) == DataType) ? :(T) :  :(T{UnknownRef})
 
-add_param{T <: CRS}(::Type{T}) = typeof(T.parameters[1]) == DataType ? T : error("always specify an SRID when using the CRS type")
+add_param{T <: CRS}(::Type{T}) = typeof(_get_params(T)[1]) == DataType ? T : error("always specify an SRID when using the CRS type")
 
 # retrieve datums and ellipsoids
-@generated ellipsoid{T <: ELL_param_fam}(::Type{T}) = :($(ellipsoid(T.parameters[1])))           # reference ellipsoid for the position
+@generated ellipsoid{T <: ELL_param_fam}(::Type{T}) = :($(ellipsoid(_get_params(T)[1])))           # reference ellipsoid for the position
 
 # methods to pull the reference point from the template
-@generated ELL_type{T <: ELL_param_fam}(::Type{T}) = :($(T.parameters[1]))
-@generated ELL_type{T <: ELL_param_fam}(::T) = :($(T.parameters[1]))
-@generated ELL_type{T <: LL_param_fam}(::Type{T}) = :($(ELL_type(T.parameters[1])))
-@generated LL_ref{T <: LL_param_fam}(::Type{T}) = :($(T.parameters[1]))
-@generated LL_ref{T <: LL_param_fam}(::T) = :($(T.parameters[1]))
+@generated ELL_type{T <: ELL_param_fam}(::Type{T}) = :($(_get_params(T)[1]))
+@generated ELL_type{T <: ELL_param_fam}(::T) = :($(_get_params(T)[1]))
+@generated ELL_type{T <: LL_param_fam}(::Type{T}) = :($(ELL_type(_get_params(T)[1])))
+@generated LL_ref{T <: LL_param_fam}(::Type{T}) = :($(_get_params(T)[1]))
+@generated LL_ref{T <: LL_param_fam}(::T) = :($(_get_params(T)[1]))
 
 # add the ENU ref or chnage it to LL if its LLA
-@generated add_LL_ref{T <: ENU}(::Type{T}) = typeof(T.parameters[1]) == TypeVar ? :(ENU_NULL) : ((typeof(T.parameters[1]) <: LLA) ? :($(ENU{LL(T.parameters[1])})) :  :($(ENU{T.parameters[1]})))
+@generated add_LL_ref{T <: ENU}(::Type{T}) = typeof(_get_params(T)[1]) == TypeVar ? :(ENU_NULL) : ((typeof(_get_params(T)[1]) <: LLA) ? :($(ENU{LL(_get_params(T)[1])})) :  :($(ENU{_get_params(T)[1]})))
 
 
 #####################################################
 # Force the template parameter when constructing
 #####################################################
 
-call(::Type{LL}, x::Real, y::Real) = add_param(LL)(x,y)
-call(::Type{LLA}, x::Real, y::Real, z::Real) = add_param(LLA)(x,y,z)
-call(::Type{ECEF}, x::Real, y::Real, z::Real) = add_param(ECEF)(x,y,z)
-call(::Type{ENU}, x::Real, y::Real, z::Real) = add_param(ENU)(x,y,z)
+#call(::Type{LL}, x::Real, y::Real) = add_param(LL)(x,y)
+#call(::Type{LLA}, x::Real, y::Real, z::Real) = add_param(LLA)(x,y,z)
+#call(::Type{ECEF}, x::Real, y::Real, z::Real) = add_param(ECEF)(x,y,z)
+#call(::Type{ENU}, x::Real, y::Real, z::Real) = add_param(ENU)(x,y,z)
 
 
 #
 # allow crazy parameter construction for ALL types (legacy support)
-# 
-call{T <: Vec3_fam}(::Type{T}, x::Real, y::Real) = add_param(T)(x,y,0.0)
-call{T <: Vec2_fam}(::Type{T}, x::Real, y::Real, z::Real) = add_param(T)(x,y)
+#
+#(::Type{T}){T <: Vec3_fam}(x::Real, y::Real) = add_param(T)(x,y,0.0)
+#(::Type{T}){T <: Vec2_fam}(x::Real, y::Real, z::Real) = add_param(T)(x,y)
 
 
 
@@ -140,9 +138,9 @@ end
 @default_convs(ECEF, KnownDatum, UnknownDatum)
 @default_convs(ENU, LLA, UnknownRef)
 
-# dont macro srid type's, we don't want to allow stripping of the SRID 
-geotransform{T <: SRID}(::Type{CRS}, X::CRS{T}) = X  
-geotransform{T <: SRID}(::Type{CRS{T}}, X::CRS{T}) = X               
+# dont macro srid type's, we don't want to allow stripping of the SRID
+geotransform{T <: SRID}(::Type{CRS}, X::CRS{T}) = X
+geotransform{T <: SRID}(::Type{CRS{T}}, X::CRS{T}) = X
 
 
 #
@@ -178,7 +176,7 @@ function convert{T <: Geodesy_fam}(::Type{Vector{T}}, X::AbstractMatrix; row::Bo
     oT = add_param(T)
     n = (row) ? size(X,1) : size(X,2)
     Xout = Vector{oT}(n)  # cant make list comprehesion get the output type right
-    if (T <: Vec2_fam) && row 
+    if (T <: Vec2_fam) && row
         for i = 1:n; Xout[i] = oT(X[i,1], X[i,2]); end
     elseif (row)
         for i = 1:n; Xout[i] = oT(X[i,1], X[i,2], X[i,3]); end
@@ -199,14 +197,12 @@ end
 ###################################################################
 
 # we want to make sure any created Vector have the template parameter in them
-# add_param{T <: ELL_param_fam, U <: ELL_param_fam}(::Type{T}, ::Type{U}) = T ==  add_param(T) ? T : T{U.parameters[1]}                              # not type safe :-(
 @generated add_param{T <: ELL_param_fam, U <: ELL_param_fam}(::Type{T}, ::Type{U}) = (T == add_param(T)) ? :(T) : :(T{$(ELL_type(U))})
 
-# add_param{T <: ELL_param_fam, U <: LL_param_fam}(::Type{T}, ::Type{U}) = T ==  add_param(T) ? T : T{typeof(U.parameters[1]).parameters[1]}        # not type safe :-(
-@generated add_param{T <: ELL_param_fam, U <: LL_param_fam}(::Type{T}, ::Type{U}) = T ==  add_param(T) ? :(T) : :(T{$(typeof(U.parameters[1]).parameters[1])})
+@generated add_param{T <: ELL_param_fam, U <: LL_param_fam}(::Type{T}, ::Type{U}) = T ==  add_param(T) ? :(T) : :(T{$_get_params((typeof(_get_params(U)[1]))[1])})
 
 # default to not include reference position in local types
-add_param{T <: LL_param_fam, U <: Geodesy_fam}(::Type{T}, ::Type{U}) = add_param(T)  
+add_param{T <: LL_param_fam, U <: Geodesy_fam}(::Type{T}, ::Type{U}) = add_param(T)
 
 # add parameters when it might be an SRID
 @generated add_param{T <: Geodesy_fam, U <: Geodesy_fam}(::Type{T}, ::Type{U}) = (T <: CRS) ? :(T) : ((U <: CRS) ? :(add_param(T)) : :(add_param(T, U)))
@@ -258,7 +254,7 @@ function proj4_vectorized{T <: Proj4_fam, U <: Proj4_fam}(::Type{T}, X::Vector{U
         warn("Unexpected: using Proj4 to geotransform between Geodesy point types.  How'd this happen")
     end
 
-    # convert to a matrix 
+    # convert to a matrix
     mat = Matrix{Float64}(length(X), 3)
     @inbounds for i = 1:length(X)
         mat[i, 1] = X[i][1]
@@ -274,14 +270,7 @@ function proj4_vectorized{T <: Proj4_fam, U <: Proj4_fam}(::Type{T}, X::Vector{U
     @inbounds for i = 1:length(X)
         X[i] = T(mat[i,1], mat[i,2], mat[i,3])
     end
-    
+
     return X
 end
 
-
-
-
-
-
-
-   

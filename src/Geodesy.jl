@@ -4,14 +4,14 @@ VERSION >= v"0.4.0-dev+6521" && __precompile__(true)
 
 module Geodesy
 
-
-using FixedSizeArrays
+using StaticArrays
 using Proj4
+using Compat
 
-import Base.show, Base.call, Base.convert, Base.+, Base.-, Base.isnan, Base.getindex
+import Base.show, Base.convert, Base.+, Base.-, Base.isnan, Base.getindex
 
 # decalare the position supertype here
-abstract  GeodesyType
+@compat abstract type GeodesyType end
 
 for f in ["datums", "ellipsoids", "srid", "geodesy_types", "known_srids", "utm", "math_funcs", "type_methods", "transform", "external",
           "ITRF_transformations",

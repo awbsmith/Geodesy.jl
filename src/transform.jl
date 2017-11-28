@@ -7,45 +7,45 @@
 
   Usage:
 
-    geotransform(::Type{T}, X)        
+    geotransform(::Type{T}, X)
 
-        Transform geodesy point X to the coordinate system defined by T     
+        Transform geodesy point X to the coordinate system defined by T
 
         Examples:
             geotransform(ECEF,                   LLA{WGS84}(0,0,0))
             geotransform(ECEF{WGS84},            LLA{WGS84}(0,0,0))
-            geotransform(CRS{SRID{:EPSG, 4978}}, LLA{WGS84}(0,0,0))   
+            geotransform(CRS{SRID{:EPSG, 4978}}, LLA{WGS84}(0,0,0))
             geotransform(ENU{LLA{WGS84}(0,0,0)}, LLA{WGS84}(1,1,10))  # ENU frame centered on LLA{WGS84}(0,0,0)
 
 
-    geotransform(::Type{T}, X, ref)   
+    geotransform(::Type{T}, X, ref)
 
-        Transform geodesy point X to the coordinate system defined by T using the reference data in ref    
+        Transform geodesy point X to the coordinate system defined by T using the reference data in ref
 
         Examples:
             geotransform(ECEF{UnknownDatum}, LLA{UnknownDatum}(0,0,0), Geodesy.eWGS84)  # supply the ellipse to use since there's no datum info
             geotransform(ENU, LLA{WGS84}(1,1,10), LLA{WGS84}(0,0,0))                    # ENU frame centered on LLA{WGS84}(0,0,0)
 
 
-    geotransform(::Type{T}, X, handler_output, handler_input)   
+    geotransform(::Type{T}, X, handler_output, handler_input)
 
         Transform geodesy point X to the coordinate system defined by T using the package indicated by the package handlers
-                                    
+
         Example:
             geotransform(ECEF{WGS84}, LLA{WGS84}(0,0,0), Geodesy.Proj4Handler, Geodesy.Proj4Handler)  # Get the Proj4 package to do the transform
 
 
-    geotransform(::Type{T}, X, ref, handler_output, handler_input)   
+    geotransform(::Type{T}, X, ref, handler_output, handler_input)
 
         Transform geodesy point X to the coordinate system defined by T using the reference data ref and package indicated by the handlers
-                                    
+
         Example:
 
             # Get the Proj4 package to do the transform by suppling the SRIDs seperately
-            geotransform(ECEF{UnknownDatum}, LLA{UnknownDatum}(0,0,0), (SRID{:epsg, 4978}, SRID{:epsg, 4326}), Geodesy.Proj4Handler, Geodesy.Proj4Handler)  
+            geotransform(ECEF{UnknownDatum}, LLA{UnknownDatum}(0,0,0), (SRID{:epsg, 4978}, SRID{:epsg, 4326}), Geodesy.Proj4Handler, Geodesy.Proj4Handler)
 
 
-    
+
 
 """
 geotransform(X)         = geotransform(X, get_handler(X))
@@ -53,12 +53,12 @@ geotransform(X, Y)      = geotransform(X, Y, get_handler(X), get_handler(Y))
 geotransform(X, Y, ref) = geotransform(X, Y, ref, get_handler(X), get_handler(Y))  # with a reference point
 
 # error message for when no handler is defined
-function geotransform{Handler1}(X, ::Type{Handler1}) 
+function geotransform{Handler1}(X, ::Type{Handler1})
     tOut = isa(X, DataType) ? X : typeof(X)
     tIn = !isa(Y, DataType) ? typeof(Y) : error("geotransform: expected a point type as the second input, got DataType: $(Y)")
     error("No methods defined to transform from $(tIn) to $(tOut)")
 end
-function geotransform{Handler1, Handler2}(X, Y, ::Type{Handler1}, ::Type{Handler2}) 
+function geotransform{Handler1, Handler2}(X, Y, ::Type{Handler1}, ::Type{Handler2})
     tOut = isa(X, DataType) ? X : typeof(X)
     tIn = !isa(Y, DataType) ? typeof(Y) : error("geotransform: expected a point type as the second input, got DataType: $(Y)")
     error("No methods defined to transform from $(tIn) to $(tOut)")
@@ -122,8 +122,8 @@ geotransform{T <: LLA, U <: LL}(::Type{T}, ll::U, ::Type{GeodesyHandler}, ::Type
 ### LLA to ECEF coordinates ###
 ###############################
 
-# reference ellipse inferred from the in / output types 
-function geotransform{T <: ECEF, U <: Union{LL, LLA}}(::Type{T}, X::U, ::Type{GeodesyHandler}, ::Type{GeodesyHandler}) 
+# reference ellipse inferred from the in / output types
+function geotransform{T <: ECEF, U <: Union{LL, LLA}}(::Type{T}, X::U, ::Type{GeodesyHandler}, ::Type{GeodesyHandler})
     oT = add_param(T, U)  # insert the datum if needed
     datum = select_datum(get_datum(oT), get_datum(U))
     ellipse = ellipsoid(datum)
@@ -131,7 +131,7 @@ function geotransform{T <: ECEF, U <: Union{LL, LLA}}(::Type{T}, X::U, ::Type{Ge
 end
 
 # reference ellipse specified (N.B. output type is assumed to be what the user wants)
-function geotransform{T <: ECEF, U <: Union{LL, LLA}}(::Type{T}, X::U, ellipse::Ellipsoid, ::Type{GeodesyHandler}, ::Type{GeodesyHandler}) 
+function geotransform{T <: ECEF, U <: Union{LL, LLA}}(::Type{T}, X::U, ellipse::Ellipsoid, ::Type{GeodesyHandler}, ::Type{GeodesyHandler})
     oT = add_param(T, U)  # insert the datum if needed
     lla_to_ecef(oT, X, ellipse)
 end
@@ -159,7 +159,7 @@ end
 ###############################
 
 # reference ellipse inferred from the in / output types (always using LL to parameterise atm)
-function geotransform{T <: Union{LL, LLA}, U <: ECEF}(::Type{T}, X::U, ::Type{GeodesyHandler}, ::Type{GeodesyHandler}) 
+function geotransform{T <: Union{LL, LLA}, U <: ECEF}(::Type{T}, X::U, ::Type{GeodesyHandler}, ::Type{GeodesyHandler})
     oT = add_param(T, U)  # insert the datum if needed
     datum = select_datum(get_datum(oT), get_datum(U))
     ellipse = ellipsoid(datum)
@@ -167,7 +167,7 @@ function geotransform{T <: Union{LL, LLA}, U <: ECEF}(::Type{T}, X::U, ::Type{Ge
 end
 
 # reference ellipse specified (N.B. output type is assumed to be what the user wants)
-function geotransform{T <: Union{LL, LLA}, U <: ECEF}(::Type{T}, X::U, ellipse::Ellipsoid, ::Type{GeodesyHandler}, ::Type{GeodesyHandler}) 
+function geotransform{T <: Union{LL, LLA}, U <: ECEF}(::Type{T}, X::U, ellipse::Ellipsoid, ::Type{GeodesyHandler}, ::Type{GeodesyHandler})
     oT = add_param(T, U)  # insert the datum if needed
     lla_to_ecef(oT, X, ellipse)
 end
@@ -185,7 +185,7 @@ function ecef_to_lla{T <: Union{LL, LLA}}(::Type{T}, ecef, ellipse::Ellipsoid)
     h = p / cos(ϕ) - N
 
     lla = T(rad2deg(λ), rad2deg(ϕ), h)
-    
+
     return lla
 end
 
@@ -201,14 +201,14 @@ function ecef_to_lla_test{T <: Union{LL, LLA}}(::Type{T}, ecef, ellipse::Ellipso
     latTol = hTol / ellipse.a
 
     # go back into Geodetic via iterative method
-    X, Y, Z = getX(ecef), getY(ecef), getZ(ecef) 
+    X, Y, Z = getX(ecef), getY(ecef), getZ(ecef)
     lon = atan2(Y, X)
     R = sqrt(X*X + Y*Y)
 
     # initialisation for iterative lat and h solution
     h = 0.0
     lat = atan2(Z,(1.0 - ellipse.e²) * R)
-    
+
     converged = false
     maxIter = 10
     i=1
@@ -221,7 +221,7 @@ function ecef_to_lla_test{T <: Union{LL, LLA}}(::Type{T}, ecef, ellipse::Ellipso
         h = hNew
         i=i+1
     end
-    
+
     return T(rad2deg(lon), rad2deg(lat), h)
 
 end
@@ -283,8 +283,8 @@ end
 geotransform_params{R <: Union{LLA, LL}, T <: ECEF}(::Type{ENU{R}}, ::Type{T}, ::Type{GeodesyHandler}, ::Type{GeodesyHandler}) = geotransform_params(T, ENU, R, GeodesyHandler, GeodesyHandler)
 
 # reference point as a parameter
-function geotransform_params{T <: ECEF, Ref <: Union{LLA, LL}}(::Type{ENU}, ::Type{T}, ll_ref::Ref, ::Type{GeodesyHandler}, ::Type{GeodesyHandler})  
-    
+function geotransform_params{T <: ECEF, Ref <: Union{LLA, LL}}(::Type{ENU}, ::Type{T}, ll_ref::Ref, ::Type{GeodesyHandler}, ::Type{GeodesyHandler})
+
     ϕdeg, λdeg, h =  get_lat(ll_ref), get_lon(ll_ref), get_alt(ll_ref)
 
     # Compute rotation matrix
@@ -294,13 +294,13 @@ function geotransform_params{T <: ECEF, Ref <: Union{LLA, LL}}(::Type{ENU}, ::Ty
     # Reference
     ecef_ref = Ref <: LL ? geotransform(T, ll_ref) : geotransform(T, LL(ll_ref))  # omit height here when calculating the reference point in ECEF.  Add it back at the end
 
-    R = @fsa([-sinλ        cosλ        0.0;
-              -cosλ*sinϕ   -sinλ*sinϕ    cosϕ;
-               cosλ*cosϕ    sinλ*cosϕ    sinϕ])
+    R = @SMatrix([-sinλ        cosλ        0.0;
+                  -cosλ*sinϕ   -sinλ*sinϕ    cosϕ;
+                   cosλ*cosϕ    sinλ*cosϕ    sinϕ])
 
-    t = -R * Vec(ecef_ref.x, ecef_ref.y, ecef_ref.z) - @fsa([0.0, 0.0, h])
+    t = -R * SVector(ecef_ref.x, ecef_ref.y, ecef_ref.z) - SVector(0.0, 0.0, h)
     return (R, t)
-    
+
 end
 
 
@@ -312,7 +312,7 @@ end
 # convert to ECEF when the reference position is included in the ENU template
 function geotransform{T <: ECEF, U}(::Type{T}, enu::ENU{U}, ::Type{GeodesyHandler}, ::Type{GeodesyHandler})   # I cant template U into anything because its a value type :-(
     ref = (isa(U, LL) || isa(U, LLA)) ? U : LL(U)
-    enu_to_ecef(add_param(T, U), enu, ref)  
+    enu_to_ecef(add_param(T, U), enu, ref)
 end
 
 # convert to ECEF when the LL reference position is not included in the ENU template
@@ -328,7 +328,7 @@ geotransform{T <: ECEF}(::Type{T}, enu::ENU, ll_ref::Union{LLA, LL}, ::Type{Geod
 
 # worker function
 function enu_to_ecef{T <: ECEF, U <: Union{LL, LLA}}(::Type{T}, enu::ENU, ll_ref::U)
-    
+
     ϕdeg, λdeg, h =  get_lat(ll_ref), get_lon(ll_ref), get_alt(ll_ref)
 
     # Reference
@@ -364,8 +364,8 @@ geotransform_params{T <: ECEF, R <: Union{LLA, LL}}(::Type{T}, ::Type{ENU{R}}, :
 
 # no LLA reference provided in the ENU type so a LLA ref must be supplied
 # N.B. this will ignore the LLA refernce in ENU template
-function geotransform_params{T <: ECEF, U <: ENU, Ref <: Union{LLA, LL}}(::Type{T}, ::Type{U}, ll_ref::Ref, ::Type{GeodesyHandler}, ::Type{GeodesyHandler}) 
-    
+function geotransform_params{T <: ECEF, U <: ENU, Ref <: Union{LLA, LL}}(::Type{T}, ::Type{U}, ll_ref::Ref, ::Type{GeodesyHandler}, ::Type{GeodesyHandler})
+
     ϕdeg, λdeg, h =  get_lat(ll_ref), get_lon(ll_ref), get_alt(ll_ref)
 
     # Compute rotation matrix
@@ -375,14 +375,14 @@ function geotransform_params{T <: ECEF, U <: ENU, Ref <: Union{LLA, LL}}(::Type{
     # Reference
     ecef_ref = Ref <: LL ? geotransform(T, ll_ref) : geotransform(T, LL(ll_ref))  # omit height here when calculating the reference point in ECEF.  Add it back later
 
-    R = @fsa([-sinλ  -cosλ*sinϕ    cosλ*cosϕ;
-               cosλ  -sinλ*sinϕ    sinλ*cosϕ;
-               0.0    cosϕ            sinϕ])
+    R = @SMatrix([-sinλ  -cosλ*sinϕ    cosλ*cosϕ;
+                   cosλ  -sinλ*sinϕ    sinλ*cosϕ;
+                   0.0    cosϕ            sinϕ])
 
-    t = Vec(ecef_ref.x, ecef_ref.y, ecef_ref.z) + R * @fsa([0.0, 0.0, h])
+    t = SVector(ecef_ref.x, ecef_ref.y, ecef_ref.z) + R * SVector(0.0, 0.0, h)
 
     return (R, t)
-    
+
 end
 
 
@@ -392,11 +392,11 @@ end
 ##############################
 
 # no convert the point to ECEF then go from there
-geotransform{T <: ENU, U <: Union{LLA, LL}}(::Type{T}, lla::U, ::Type{GeodesyHandler}, ::Type{GeodesyHandler}) = 
+geotransform{T <: ENU, U <: Union{LLA, LL}}(::Type{T}, lla::U, ::Type{GeodesyHandler}, ::Type{GeodesyHandler}) =
     geotransform(T, ECEF{select_datum(T, U)}(lla), GeodesyHandler, GeodesyHandler)
 
 # convert the point to ECEF then go from there
-geotransform{T <: ENU, U <: Union{LLA, LL}, V}(::Type{T}, lla::U, ref::V, ::Type{GeodesyHandler}, ::Type{GeodesyHandler}) = 
+geotransform{T <: ENU, U <: Union{LLA, LL}, V}(::Type{T}, lla::U, ref::V, ::Type{GeodesyHandler}, ::Type{GeodesyHandler}) =
     geotransform(T, ECEF{select_datum(T, U, V)}(lla), ref, GeodesyHandler, GeodesyHandler)
 
 
@@ -407,7 +407,7 @@ geotransform{T <: ENU, U <: Union{LLA, LL}, V}(::Type{T}, lla::U, ref::V, ::Type
 geotransform{T <: Union{LLA, LL}}(::Type{T}, enu::ENU_NULL, ::Type{GeodesyHandler}, ::Type{GeodesyHandler})  = error("You must supply the reference point in the ENU type or as an additional input")
 
 # no convert the point to ECEF then go from there
-function geotransform{T <: Union{LLA, LL}, U}(::Type{T}, enu::ENU{U}, ::Type{GeodesyHandler}, ::Type{GeodesyHandler}) 
+function geotransform{T <: Union{LLA, LL}, U}(::Type{T}, enu::ENU{U}, ::Type{GeodesyHandler}, ::Type{GeodesyHandler})
     eT = ECEF{select_datum(T, U)}  # find a datum somewhere
     T(geotransform(eT, enu, GeodesyHandler, GeodesyHandler))
 end
@@ -445,7 +445,7 @@ end
 #################################################
 
 # vectorizied transform for geodesy types
-function geotransform_vector{T, U}(::Type{T}, X::Vector{U}, ::Type{GeodesyHandler}, ::Type{GeodesyHandler}) 
+function geotransform_vector{T, U}(::Type{T}, X::Vector{U}, ::Type{GeodesyHandler}, ::Type{GeodesyHandler})
 
     # make sure the output parameter is filled
     oT =  add_param(T, U)
@@ -457,7 +457,7 @@ function geotransform_vector{T, U}(::Type{T}, X::Vector{U}, ::Type{GeodesyHandle
 end
 
 # vectorizied transform for geodesy types
-function geotransform_vector{T, U, V}(::Type{T}, X::Vector{U}, ll_ref::V, ::Type{GeodesyHandler}, ::Type{GeodesyHandler}) 
+function geotransform_vector{T, U, V}(::Type{T}, X::Vector{U}, ll_ref::V, ::Type{GeodesyHandler}, ::Type{GeodesyHandler})
 
     # make sure the output parameter is filled
     oT =  add_param(T, U)
@@ -467,14 +467,4 @@ function geotransform_vector{T, U, V}(::Type{T}, X::Vector{U}, ll_ref::V, ::Type
     end
     return Xout
 end
-
-
-
-
-
-
-
-
-
-
 

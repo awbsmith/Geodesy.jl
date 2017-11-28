@@ -2,18 +2,19 @@ using Geodesy
 using Geodesy: ED50
 using Base.Test
 
-@test_approx_eq distance(ENU(1, 1, 1), ENU(2, 2, 2)) sqrt(3)
-@test_approx_eq distance(ECEF(1, 1, 1), ECEF(3, 3, 3)) sqrt(12)
-let lla = LLA(1, 2, 3)
-    @test_throws MethodError distance(lla, lla)
-end
+@testset "Testing distance calculations" begin
 
 randLLA() = LLA{WGS84}((rand() - .5) * 360,
                        (rand() - .5) * 180,
                        (rand() - .5) * 18_000)
 
-# Test ECEF/ENU distance equivalence
+@test distance(ENU(1, 1, 1), ENU(2, 2, 2)) ≈ sqrt(3)
+@test distance(ECEF(1, 1, 1), ECEF(3, 3, 3)) ≈ sqrt(12)
+let lla = LLA(1, 2, 3)
+    @test_throws MethodError distance(lla, lla)
+end
 
+# Test ECEF/ENU distance equivalence
 for _ = 1:1_000
     lla1 = randLLA()
     lla2 = randLLA()
@@ -24,7 +25,7 @@ for _ = 1:1_000
     ecef1a = ECEF(lla1)
     ecef2a = ECEF(lla2)
 
-    @test_approx_eq distance(enu1a, enu2a) distance(ecef1a, ecef2a)
+    @test distance(enu1a, enu2a) ≈ distance(ecef1a, ecef2a)
 end
 
 # Test WGS84 data
@@ -150,4 +151,6 @@ for t in [
         @test contains(e.msg, "antipodal")
         @test 179 < dlon < 181
     end
+end
+
 end

@@ -2,9 +2,9 @@
 # parameters used for distance calculations and coordinate system transforms
 
 #
-# Ellipsoids 
+# Ellipsoids
 #
-immutable Ellipsoid              
+@compat struct Ellipsoid
     a::Float64                          # Semi-major axis
     b::Float64                          # Semi-minor axis
     e²::Float64                         # Eccentricity squared
@@ -37,7 +37,7 @@ end
 
 #
 # Predefined Ellipses
-# 
+#
 
 # A few common Ellipsoids (TODO: steal values from Proj4!)
 const eWGS84      = Ellipsoid(a = "6378137.0", f_inv = "298.257223563")
@@ -50,40 +50,29 @@ const eAiry       = Ellipsoid(a = "6377563.396", b = "6356256.909")
 
 #
 # Generate Ellipse types
-# 
+#
 
 
 # build known ellipses
-abstract Ellipse <: KnownDatum
+@compat abstract type Ellipse <: KnownDatum end
 
 # custom type
-immutable CustomEllipse{T <: Ellipsoid} <: Ellipse end
+@compat struct CustomEllipse{T <: Ellipsoid} <: Ellipse end
 ellipsoid{T <: Ellipsoid}(::Type{CustomEllipse{T}}) = T # grab the ellipse from the type
 
 # A few common ellipses
-immutable WGS84_ELLIPSE <: Ellipse end
+@compat struct WGS84_ELLIPSE <: Ellipse end
 ellipsoid(::Type{WGS84_ELLIPSE}) = eWGS84
 
-immutable GRS80_ELLIPSE <: Ellipse end
+@compat struct GRS80_ELLIPSE <: Ellipse end
 ellipsoid(::Type{GRS80_ELLIPSE}) = eGRS80
 
-immutable HAYFORD_ELLIPSE <: Ellipse end
+@compat struct HAYFORD_ELLIPSE <: Ellipse end
 ellipsoid(::Type{HAYFORD_ELLIPSE}) = eHayford
 
-immutable AIRY_ELLIPSE <: Ellipse end
+@compat struct AIRY_ELLIPSE <: Ellipse end
 ellipsoid(::Type{AIRY_ELLIPSE}) = eAiry
 
-immutable CLARKE66_ELLIPSE <: Ellipse end
+@compat struct CLARKE66_ELLIPSE <: Ellipse end
 ellipsoid(::Type{CLARKE66_ELLIPSE}) = eClarke1866
-
-
-
-
-
-
-
-
-
-
-
 

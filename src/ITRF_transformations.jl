@@ -86,10 +86,10 @@ function ITRF_from_ITRF(ITRF_output_year, ITRF_input_year, epoch)
     Tx,Ty,Tz, D, Rx,Ry,Rz = unitconv .* (params .+ rates*dt)
 
     # assemble the backwards in time version
-    M = @fsa [1+D  Rz  -Ry;
-             -Rz   1+D  Rx;
-              Ry  -Rx   1+D]
-    T = Vec(Tx,Ty,Tz)
+    M = @SMatrix ([1+D  Rz  -Ry;
+                 -Rz   1+D  Rx;
+                  Ry  -Rx   1+D])
+    T = SVector(Tx,Ty,Tz)
 
     # want the inverse to go forward in time
     if (ITRF_output_year > ITRF_input_year)
@@ -158,11 +158,11 @@ function GDA94_from_ITRF(ITRF_year, epoch)
     unitconv = [1e-3, 1e-3, 1e-3, 1e-9, mas2rad, mas2rad, mas2rad]
     Tx,Ty,Tz, Sc, Rx,Ry,Rz = unitconv .* (params .+ rates*dt)
 
-    M = (1+Sc) * @fsa [1.0  Rz  -Ry;
-                      -Rz  1.0   Rx;
-                       Ry  -Rx  1.0]
+    M = (1+Sc) * SMatrix([1.0  Rz  -Ry;
+                         -Rz  1.0   Rx;
+                          Ry  -Rx  1.0])
 
-    (M, Vec(Tx,Ty,Tz))
+    (M, SVector(Tx,Ty,Tz))
 end
 
 """
@@ -242,10 +242,10 @@ function ETRF_from_ITRF(Year, epoch)
     mas2rad = deg2rad(1e-3/(60*60))
     unitconv = [1e-2, 1e-2, 1e-2, 1e-8, mas2rad, mas2rad, mas2rad]
     Tx,Ty,Tz, D, Rx,Ry,Rz = unitconv .* (params .+ rates*dt)
-    M =  @fsa [1+D  Rz  -Ry;
-              -Rz   1+D  Rx;
-               Ry  -Rx   1+D]
-    (M, Vec(Tx,Ty,Tz))
+    M =  @SMatrix [1+D  Rz  -Ry;
+                  -Rz   1+D  Rx;
+                   Ry  -Rx   1+D]
+    (M, SVector(Tx,Ty,Tz))
 end
 
 function ETRF2000_from_ITRF(ITRF_year, epoch)
@@ -291,11 +291,11 @@ function ETRF2000_from_ITRF(ITRF_year, epoch)
     unitconv = [1e-3, 1e-3, 1e-3, 1e-9, mas2rad, mas2rad, mas2rad]
     Tx,Ty,Tz, D, Rx,Ry,Rz = unitconv .* (params .+ rates*dt)
 
-    M = @fsa [1+D  Rz  -Ry;
-             -Rz   1+D  Rx;
-              Ry  -Rx   1+D]
+    M = @SMatrix [1+D  Rz  -Ry;
+                 -Rz   1+D  Rx;
+                  Ry  -Rx   1+D]
 
-    (M, Vec(Tx,Ty,Tz))
+    (M, SVector(Tx,Ty,Tz))
 end
 
 """

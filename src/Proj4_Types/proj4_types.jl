@@ -1,6 +1,6 @@
 
 # a handler for Proj4
-immutable Proj4Handler   <: AbstractPackageHandler; end     # for point handled by the Proj4 package
+@compat struct Proj4Handler   <: AbstractPackageHandler; end     # for point handled by the Proj4 package
 
 
 
@@ -13,14 +13,14 @@ For a quick reference:
     lat long style CRS's,  x -> lon, y -> lat (or get_lat() and get_lon())
     utm style CRS's,  x -> false east, y -> false north, z -> up (or get_east() get_north() get_up())
 """
-immutable CRS{T <: AbstractSRID} <: WorldPosition
+@compat struct CRS{T <: AbstractSRID} <: WorldPosition
     x::Float64
     y::Float64
     z::Float64
 end
 
 # useful shortcuts
-typealias CRS_NULL CRS{UnknownSRID}
+@compat const CRS_NULL = CRS{UnknownSRID}
 
 default_params{T <: CRS}(::Type{T}) = (UnknownSRID,)
 
@@ -39,20 +39,20 @@ get_datum{T}(::Union{Type{CRS{T}}, CRS{T}}) = get_datum(T)
 """
 Abstract type for compound coordinate reference system (i.e. height is not ellipsoidal)
 """
-abstract AbstractCCRS{T, U} <: WorldPosition
+@compat abstract type AbstractCCRS{T, U} <: WorldPosition end
 
 # use the SRID style because we need to Proj4 to handle the Geoid anyway
 """
 Compound coordinate reference system where the height is relative to a geoid
 """
-immutable CCRS_Geoid{T <: AbstractSRID, G <: AbstractGeoid} <: AbstractCCRS{T, G}
+@compat struct CCRS_Geoid{T <: AbstractSRID, G <: AbstractGeoid} <: AbstractCCRS{T, G}
     x::Float64
     y::Float64
     z::Float64
 end
 
 # convenient typecasts for compound coordinate reference systems
-typealias CCRS_NULL  CCRS_Geoid{UnknownSRID, UnknownGeoid}
+@compat const CCRS_NULL = CCRS_Geoid{UnknownSRID, UnknownGeoid}
 
 default_params{T <: CCRS_Geoid}(::Type{T}) = (UnknownSRID,
                                               UnknownGeoid)

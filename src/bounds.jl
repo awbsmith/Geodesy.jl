@@ -13,10 +13,13 @@ type Bounds{T}
 end
 
 # fill in the ellipse for the point type if its not provided
-call(::Type{Bounds{LLA}}, min_x, max_x, min_y, max_y) = Bounds{add_param(LLA)}(min_x, max_x, min_y, max_y)
-call(::Type{Bounds{LL}}, min_x, max_x, min_y, max_y) =  Bounds{add_param(LL)}(min_x, max_x, min_y, max_y)
-call(::Type{Bounds{ECEF}}, min_x, max_x, min_y, max_y) = Bounds{add_param(ECEF)}(min_x, max_x, min_y, max_y)
-call(::Type{Bounds{ENU}}, min_x, max_x, min_y, max_y) = Bounds{add_param(ENU)}(min_x, max_x, min_y, max_y)
+(::Type{Bounds{LLA}})(min_x, max_x, min_y, max_y) = Bounds{add_param(LLA)}(min_x, max_x, min_y, max_y)
+(::Type{Bounds{LL}})(min_x, max_x, min_y, max_y) =  Bounds{add_param(LL)}(min_x, max_x, min_y, max_y)
+(::Type{Bounds{ECEF}})(min_x, max_x, min_y, max_y) = Bounds{add_param(ECEF)}(min_x, max_x, min_y, max_y)
+(::Type{Bounds{ENU}})(min_x, max_x, min_y, max_y) = Bounds{add_param(ENU)}(min_x, max_x, min_y, max_y)
+
+point_type{T}(::Bounds{T}) = T
+point_type{T}(::Type{Bounds{T}}) = T
 
 # allow integer indexing
 # TODO: learn the Julia convention for this, there must be a not horrible way...
@@ -31,7 +34,7 @@ Base.setindex!{T}(bbox::Bounds{T}, val::Real, idx::Int) = setfield!(bbox, idx, F
 ### Calculate LL bounds   ###
 #############################
 
-function call{T <: Union{LL, LLA}}(::Type{Bounds{T}}, X::Vector{T})
+function (::Type{Bounds{T}}){T <: Union{LL, LLA}}(X::Vector{T})
 
     # build both paths around the circle to the first two points
     bounds_hyps = init_hyps(X, true)
@@ -45,7 +48,7 @@ end
 ### Calculate other bounds   ###
 ################################
 
-function call{T}(::Type{Bounds{T}}, X::Vector{T})
+function (::Type{Bounds{T}}){T}(X::Vector{T})
 
     max_x = max_y = -Inf
     min_x = min_y = Inf
@@ -57,7 +60,7 @@ function call{T}(::Type{Bounds{T}}, X::Vector{T})
 end
 
 # unspecified type
-call{T}(::Type{Bounds}, X::Vector{T}) = Bounds{T}(X)
+(::Type{Bounds}){T}(X::Vector{T}) = Bounds{T}(X)
 
 
 
@@ -71,7 +74,7 @@ call{T}(::Type{Bounds}, X::Vector{T}) = Bounds{T}(X)
 # by the input bounds
 
 # renamed it because it constructs a Bounds type not a ENU Type.  Does it belong as a transform?
-function call{T <: ENU, U <: Union{LL, LLA}, V <: Union{LL, LLA}}(::Type{Bounds{T}}, bounds::Bounds{U}, ll_ref::V = center(bounds))
+function (::Type{Bounds{T}}){T <: ENU, U <: Union{LL, LLA}, V <: Union{LL, LLA}}(bounds::Bounds{U}, ll_ref::V = center(bounds))
 
     oT = add_param(add_param(T, U), V)
 

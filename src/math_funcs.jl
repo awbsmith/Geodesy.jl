@@ -9,7 +9,7 @@ function add_maths{geodesy_type}(::Type{geodesy_type}, fields)
     nf = length(fields)  # number of fields and their names for the Geodesy variables
 
     # allow interaction with these types
-    interact_types = [Vec{nf, Float64}, Vector]
+    interact_types = [SVector{nf, Float64}, Vector]
 
     # create an expression to add to
     qb = quote end
@@ -20,14 +20,14 @@ function add_maths{geodesy_type}(::Type{geodesy_type}, fields)
 
     # form the whole expression
     qn = quote
-        (-){T <: $(geodesy_type)}(X::T, Y::T) = Vec{$(nf), Float64}($(rhs_expr.args...))
+        (-){T <: $(geodesy_type)}(X::T, Y::T) = SVector{$(nf), Float64}($(rhs_expr.args...))
     end
     append!(qb.args, qn.args)
 
     # Allow Rotations
     if (nf == 3)
         qn = quote
-            (*)(R::Mat{3,3,Float64}, X::$(geodesy_type)) = R * Vec(X)
+            (*)(R::SMatrix{3,3,Float64}, X::$(geodesy_type)) = R * SVector(X)
         end
         append!(qb.args, qn.args)  # include them
     end
@@ -56,6 +56,15 @@ function add_maths{geodesy_type}(::Type{geodesy_type}, fields)
         rhs_finite_expr = Expr(:&&,  :(isfinite(X.$(fields[i]))), rhs_finite_expr)
     end
 
+    qn = quote
+        # NaN
+        isnan(X::$(geodesy_type)) = $(rhs_nan_expr)
+
+        # finite
+        isfinite(X::$(geodesy_type)) = $(rhs_finite_expr)
+    end
+    append!(qb.args, qn.args)
+
     #  Fill function for the interactions types
     for iT in interact_types
 
@@ -75,12 +84,6 @@ function add_maths{geodesy_type}(::Type{geodesy_type}, fields)
 
             # subtraction
             (-){T <: $(geodesy_type)}(X::T, dX::$(iT)) = T($(rhs_sub_expr.args...))
-
-            # NaN
-            isnan(X::$(geodesy_type)) = $(rhs_nan_expr)
-
-            # finite
-            isfinite(X::$(geodesy_type)) = $(rhs_finite_expr)
 
         end
         append!(qb.args, qn.args)  # include them

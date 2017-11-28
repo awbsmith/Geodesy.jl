@@ -66,7 +66,7 @@ for i = 1:size(known_srids,1)
     q = quote
 
         # constructor from type
-        auth = symbol($(string(known_srids[i,2])))  # there must be an easier way to insert a raw symbol
+        auth = Symbol($(string(known_srids[i,2])))  # there must be an easier way to insert a raw symbol
         SRID(::Type{$(known_srids[i,1])}) = SRID{auth, $(known_srids[i,3])}
 
         # constructor from a point

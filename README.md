@@ -338,8 +338,7 @@ Template parameters for the different types are useful in that they save passing
     geodify(::Type{CustomECEF}) = ECEF{WGS84}
 
     # define a constructor that takes a geodesy type input, as well as the input to the transform 
-    import Base.call  
-    Base.call(::Type{CustomECEF}, ecef::ECEF, X::CustomLLA) = CustomECEF(X.time, X.txt, ecef[1], ecef[2], ecef[3])
+    (::Type{CustomECEF})(ecef::ECEF, X::CustomLLA) = CustomECEF(X.time, X.txt, ecef[1], ecef[2], ecef[3])
 
     # and transform
     custom_ecef = geotransform(CustomECEF, custom_lla)      # = CustomECEF(2016-02-25T16:13:59,"test input",3.9786402778542214e6,8103.702688750244,4.968362457291028e6)

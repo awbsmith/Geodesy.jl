@@ -1,30 +1,30 @@
 # special exception types
-abstract GeodesyException <: Exception
+@compat abstract type GeodesyException <: Exception end
 
 # unrecognised SRID authority
-type SridAuthException <: GeodesyException
-    msg::ASCIIString
+@compat struct SridAuthException <: GeodesyException
+    msg::String
     code::Int
-    handler::ASCIIString
+    handler::String
 end
 
 # unrecognised SRID authority
-type SridUnknownException <: GeodesyException
-    msg::ASCIIString
+@compat struct SridUnknownException <: GeodesyException
+    msg::String
     code::Int
-    handler::ASCIIString
+    handler::String
 end
 
 # unknown geoid
-type GeoidUnknownException <: GeodesyException
-    msg::ASCIIString
+@compat struct GeoidUnknownException <: GeodesyException
+    msg::String
     code::Int
-    handler::ASCIIString
+    handler::String
 end
 
 # can't find the geoid file
-type GeoidFileException <: GeodesyException
-    msg::ASCIIString
+@compat struct GeoidFileException <: GeodesyException
+    msg::String
     code::Int                          # file not found (SystemError) seems to put a 2 here
 end
 
@@ -32,11 +32,11 @@ end
 # get the Proj4 string for a given SRID
 function proj4_str{auth, code}(::Type{SRID{auth, code}})
 
-    dict_sym = symbol(lowercase(string(auth)))
+    dict_sym = Symbol(lowercase(string(auth)))
 
     local dict
     try # hasfield / isfield?
-        dict = Proj4.(dict_sym)
+        dict = getfield(Proj4, dict_sym)
     catch
         throw(SridAuthException("Proj4 does not know the SRID Authority: $(auth).\nPlease overload Geodesy.proj4_str to return a the correct Proj4 string for SRID{$(auth), $(code)}\n" *
                                 "Geodesy.proj4_str(::Type{SRID{$(auth), $(code)}}) = <Proj4 projection string>", 1, "Proj4"))
@@ -46,7 +46,7 @@ function proj4_str{auth, code}(::Type{SRID{auth, code}})
         throw(SridUnknownException("Proj4 does not know the code $(code) for authority $(auth).\nPlease overload Geodesy.proj4_str to return a the correct Proj4 string for SRID{$(auth), $(code)}\n" *
                                    "Geodesy.proj4_str(::Type{SRID{$(auth), $(code)}}) = <Proj4 projection string>", 1, "Proj4"))
     end
-    return dict[code]::ASCIIString
+    return dict[code]::String
 
 end
 
@@ -68,7 +68,7 @@ function proj4_str{T <: SRID, G <: KnownGeoid}(::Type{T}, ::Type{G})
     if !isfile(geoid)
         throw(GeoidFileException("Can not locate the geoid file for geoid: $(G) (Hint: use Geodesy.set_geoid_dir)", 2))
     end
-    p_str = ASCIIString(p_str * " +geoidgrids=$(geoid)")
+    p_str = String(p_str * " +geoidgrids=$(geoid)")
 
 end
 
