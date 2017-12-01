@@ -1,4 +1,4 @@
 julia 0.4
 Compat
-FixedSizeArrays
 Proj4
+StaticArrays
